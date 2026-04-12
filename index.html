@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Ali & Patrick's Shows</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      overflow-x: hidden;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #FBF5EB;
+      color: #2C2C2C;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #2C3E50 0%, #1a252f 100%);
+      color: #fff;
+      padding: 20px 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .header-top h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-login {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .btn-login:hover { background: rgba(255,255,255,0.25); }
+
+    .fab-suggest {
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      right: 20px;
+      background: #2C3E50;
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 50;
+      font-family: inherit;
+    }
+    .fab-suggest:hover { background: #1a252f; }
+
+    .btn-add { background: #E67E22; color: #fff; }
+    .btn-add:hover { background: #d35400; }
+
+    .btn-small { padding: 4px 8px; font-size: 11px; border-radius: 4px; }
+    .btn-move { background: #3498db; color: #fff; }
+    .btn-archive { background: #95a5a6; color: #fff; }
+    .btn-edit { background: #2ecc71; color: #fff; }
+    .btn-delete { background: #e74c3c; color: #fff; }
+
+    .tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      flex: 1;
+      padding: 10px 0;
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .tab:hover { color: rgba(255,255,255,0.85); }
+    .tab.active { color: #fff; border-bottom-color: #E67E22; }
+
+    .section-desc {
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      font-style: italic;
+      padding: 6px 20px 10px;
+    }
+
+    main { max-width: 700px; margin: 0 auto; padding: 12px 16px; }
+
+    .show-list { display: flex; flex-direction: column; gap: 0; }
+
+    .show-row {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      padding: 7px 0;
+      border-bottom: 1px solid #ebe5da;
+      font-size: 14px;
+      gap: 4px 8px;
+    }
+
+    .show-row:last-child { border-bottom: none; }
+
+    .show-title {
+      font-weight: 600;
+      color: #2C3E50;
+    }
+
+    .show-title.clickable { cursor: pointer; }
+    .show-title.clickable:hover { color: #E67E22; }
+
+    .show-movie {
+      font-weight: 400;
+      color: #95a5a6;
+      font-size: 12px;
+    }
+
+    .show-arrow {
+      font-size: 10px;
+      color: #95a5a6;
+      display: inline-block;
+      transition: transform 0.2s;
+      margin-right: 2px;
+    }
+    .show-arrow.expanded { transform: rotate(90deg); }
+
+    .show-rating {
+      color: #7f8c8d;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .show-rating .star { color: #f1c40f; }
+
+    .show-network {
+      color: #3498db;
+      text-decoration: none;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .show-network:hover { text-decoration: underline; }
+
+    .show-network-plain {
+      color: #7f8c8d;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .show-from {
+      color: #95a5a6;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .show-on {
+      color: #95a5a6;
+      font-size: 13px;
+    }
+
+    .show-notes-inline {
+      color: #aaa;
+      font-size: 12px;
+      font-style: italic;
+      white-space: nowrap;
+    }
+
+    .show-spacer { flex: 1; }
+
+    .show-actions-inline {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .show-actions-inline select {
+      padding: 3px 4px;
+      font-size: 11px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      background: #fff;
+    }
+
+    .show-actors {
+      padding: 4px 0 8px 16px;
+      display: none;
+      font-size: 13px;
+      color: #5a5a5a;
+    }
+    .show-actors.visible { display: block; }
+
+    .actor-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .actor-tag {
+      background: #f0ebe3;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .network-counts {
+      text-align: center;
+      font-size: 12px;
+      color: #95a5a6;
+      padding: 12px 0 4px;
+    }
+
+    .hidden { display: none !important; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 440px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    .modal h2 { font-size: 18px; margin-bottom: 16px; color: #2C3E50; }
+
+    .modal label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #5a5a5a;
+      margin-bottom: 4px;
+      margin-top: 12px;
+    }
+    .modal label:first-of-type { margin-top: 0; }
+
+    .modal input, .modal select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .modal input:focus, .modal select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52,152,219,0.1);
+    }
+
+    .url-row { display: flex; gap: 8px; align-items: center; }
+    .url-row input { flex: 1; }
+    .btn-find {
+      padding: 10px 12px;
+      background: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-find:hover { background: #2980b9; }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #5a5a5a;
+      margin-top: 12px;
+      cursor: pointer;
+    }
+    .checkbox-label input { width: auto; margin: 0; }
+
+    .modal-actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .btn-cancel { background: #ecf0f1; color: #2C2C2C; }
+    .btn-cancel:hover { background: #dfe6e9; }
+    .btn-save { background: #E67E22; color: #fff; }
+    .btn-save:hover { background: #d35400; }
+
+    .loading { text-align: center; padding: 40px; color: #95a5a6; font-size: 15px; }
+    .empty { text-align: center; padding: 40px; color: #bdc3c7; font-size: 15px; }
+
+    @media (max-width: 480px) {
+      .header-top h1 { font-size: 18px; }
+      .tab { padding: 10px 12px; font-size: 13px; }
+      main { padding: 8px 12px; }
+      .show-row { font-size: 13px; }
+      .show-actions-inline .btn-small { padding: 3px 6px; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <h1 id="appTitle">Ali & Patrick's Shows</h1>
+      <div class="header-actions">
+        <button class="btn btn-add hidden" id="addBtn" onclick="openAddModal()">+ Add</button>
+        <button class="btn btn-login" id="loginBtn" onclick="login()">Login</button>
+      </div>
+    </div>
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-list="watching" onclick="switchTab('watching')">Watching</div>
+      <div class="tab" data-list="waiting" onclick="switchTab('waiting')">Waiting</div>
+      <div class="tab" data-list="recommending" onclick="switchTab('recommending')">Recommending</div>
+      <div class="tab" data-list="next" onclick="switchTab('next')">Up Next</div>
+    </div>
+    <div class="section-desc" id="sectionDesc">What we're watching now.</div>
+  </header>
+
+  <main>
+    <div class="loading" id="loading">Loading shows...</div>
+    <div class="show-list" id="showList"></div>
+    <div class="empty hidden" id="empty">No shows in this list yet.</div>
+  </main>
+
+  <!-- Add/Edit Modal -->
+  <div class="modal-overlay hidden" id="modalOverlay" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2 id="modalTitle">Add Show</h2>
+      <label for="inputTitle">Show Title</label>
+      <input type="text" id="inputTitle" placeholder="e.g. The Night Agent">
+
+      <label for="inputNetwork">Network</label>
+      <select id="inputNetwork">
+        <option value="">— Select —</option>
+        <option value="Netflix">Netflix</option>
+        <option value="HBO">HBO (Max)</option>
+        <option value="Apple TV">Apple TV+</option>
+        <option value="Hulu">Hulu</option>
+        <option value="Paramount">Paramount+</option>
+        <option value="Peacock">Peacock</option>
+        <option value="Amazon">Amazon Prime</option>
+        <option value="Bravo">Bravo</option>
+        <option value="Disney+">Disney+</option>
+        <option value="Showtime">Showtime</option>
+        <option value="Starz">Starz</option>
+        <option value="NBC">NBC</option>
+      </select>
+
+      <label for="inputUrl">Show URL</label>
+      <div class="url-row">
+        <input type="text" id="inputUrl" placeholder="Paste direct URL here">
+        <button type="button" class="btn-find" onclick="findOnNetwork()">Find</button>
+      </div>
+
+      <label for="inputRecommended">Recommended By</label>
+      <input type="text" id="inputRecommended" placeholder="e.g. Whitt, TC">
+
+      <label for="inputNotes">Notes</label>
+      <input type="text" id="inputNotes" placeholder="e.g. @Patrick, Movie, Harlan Coben">
+
+      <label class="checkbox-label"><input type="checkbox" id="inputMovie"> Movie</label>
+
+      <label for="inputList">List</label>
+      <select id="inputList">
+        <option value="watching">Watching</option>
+        <option value="waiting">Waiting on Next Season</option>
+        <option value="recommending">Recommending</option>
+        <option value="next">Up Next</option>
+      </select>
+
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-save" id="modalSave" onclick="saveShow()">Add Show</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="fab-suggest" id="suggestBtn" onclick="openSuggestModal()">Suggest a Show</button>
+
+  <!-- Suggest Modal -->
+  <div class="modal-overlay hidden" id="suggestOverlay" onclick="closeSuggestModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2>Suggest a Show</h2>
+      <label for="suggestName">Your Name</label>
+      <input type="text" id="suggestName" placeholder="e.g. Dorothy">
+
+      <label for="suggestTitle">Show Title</label>
+      <input type="text" id="suggestTitle" placeholder="e.g. The Night Agent">
+
+      <label for="suggestNetwork">Network</label>
+      <select id="suggestNetwork">
+        <option value="">— Select —</option>
+        <option value="Netflix">Netflix</option>
+        <option value="HBO">HBO (Max)</option>
+        <option value="Apple TV">Apple TV+</option>
+        <option value="Hulu">Hulu</option>
+        <option value="Paramount">Paramount+</option>
+        <option value="Peacock">Peacock</option>
+        <option value="Amazon">Amazon Prime</option>
+        <option value="Bravo">Bravo</option>
+        <option value="Disney+">Disney+</option>
+        <option value="Showtime">Showtime</option>
+        <option value="Starz">Starz</option>
+        <option value="NBC">NBC</option>
+      </select>
+
+      <label for="suggestNotes">Notes</label>
+      <input type="text" id="suggestNotes" placeholder="e.g. Great thriller, has Mark Ruffalo">
+
+      <label class="checkbox-label"><input type="checkbox" id="suggestMovie"> Movie</label>
+
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeSuggestModal()">Cancel</button>
+        <button class="btn btn-save" onclick="submitSuggestion()">Send Suggestion</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ======= CUSTOMIZE THESE FOR YOUR OWN SETUP =======
+    const APP_TITLE = "Ali & Patrick's Shows";
+    const OWNERS = "Patrick & Ali";
+    // =====================================================
+
+    const NETWORK_SEARCH = {
+      'Netflix': 'https://www.netflix.com/search?q=',
+      'HBO': 'https://play.max.com/search?q=',
+      'Apple TV': 'https://tv.apple.com/search?term=',
+      'Hulu': 'https://www.hulu.com/search/',
+      'Paramount': 'https://www.paramountplus.com/search/',
+      'Bravo': 'https://www.peacocktv.com/watch/search/',
+      'Peacock': 'https://www.peacocktv.com/watch/search/',
+      'Amazon': 'https://www.amazon.com/s?i=instant-video&k=',
+    };
+
+    let shows = [];
+    let currentTab = 'watching';
+    let isEditor = false;
+    let editingId = null;
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/auth/check');
+        const data = await res.json();
+        if (data.authenticated) {
+          isEditor = true;
+          document.getElementById('addBtn').classList.remove('hidden');
+          document.getElementById('suggestBtn').classList.add('hidden');
+          document.getElementById('loginBtn').textContent = 'Logout';
+          document.getElementById('loginBtn').onclick = logout;
+        }
+      } catch (e) {}
+    }
+
+    function login() {
+      const code = prompt('Enter 4-digit code:');
+      if (!code) return;
+      window.location.href = '/auth/login?code=' + encodeURIComponent(code);
+    }
+
+    async function logout() {
+      window.location.href = '/auth/logout';
+    }
+
+    async function loadShows() {
+      try {
+        const res = await fetch('/api/shows');
+        const data = await res.json();
+        shows = data.shows || [];
+        renderShows();
+      } catch (e) {
+        document.getElementById('loading').textContent = 'Failed to load shows.';
+      }
+    }
+
+    const SECTION_DESCS = {
+      watching: "What we're watching now.",
+      waiting: "Waiting on the next season to drop.",
+      recommending: "We've watched it and we'd recommend it.",
+      next: "Shows that have been recommended but we haven't watched.",
+    };
+
+    function updateDesc() {
+      const count = shows.filter(s => s.list === currentTab).length;
+      document.getElementById('sectionDesc').textContent = SECTION_DESCS[currentTab] + ` (${count} show${count !== 1 ? 's' : ''})`;
+    }
+
+    function switchTab(list) {
+      currentTab = list;
+      window.location.hash = list;
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.list === list);
+      });
+      updateDesc();
+      renderShows();
+    }
+
+    function renderShows() {
+      updateDesc();
+      const container = document.getElementById('showList');
+      const loading = document.getElementById('loading');
+      const empty = document.getElementById('empty');
+      loading.classList.add('hidden');
+
+      const filtered = shows.filter(s => s.list === currentTab)
+        .sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      container.innerHTML = filtered.map(show => {
+        const rating = show.rating
+          ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>`
+          : '';
+        const from = show.recommended_by
+          ? ` <span class="show-from">from ${escapeHtml(show.recommended_by)}</span>`
+          : '';
+        const hasRealUrl = show.network_url && !show.network_url.includes('/search') && !show.network_url.includes('/s?') && show.network_url !== '#';
+        const network = show.network
+          ? hasRealUrl
+            ? ` <span class="show-on">on</span> <a class="show-network" href="${show.network_url}" target="_blank" rel="noopener">${escapeHtml(show.network)}</a>`
+            : ` <span class="show-on">on</span> <span class="show-network-plain">${escapeHtml(show.network)}</span>`
+          : '';
+        const notes = show.notes
+          ? ` <span class="show-notes-inline">(${escapeHtml(show.notes)})</span>`
+          : '';
+
+        let actions = '';
+        if (isEditor) {
+          actions = `
+            <div class="show-actions-inline">
+              <select onchange="moveShow(${show.id}, this.value)">
+                <option value="">Move...</option>
+                <option value="watching" ${show.list === 'watching' ? 'disabled' : ''}>Watching</option>
+                <option value="waiting" ${show.list === 'waiting' ? 'disabled' : ''}>Waiting</option>
+                <option value="recommending" ${show.list === 'recommending' ? 'disabled' : ''}>Recommending</option>
+                <option value="next" ${show.list === 'next' ? 'disabled' : ''}>Up Next</option>
+              </select>
+              <button class="btn btn-small btn-edit" onclick="openEditModal(${show.id})">Edit</button>
+              <button class="btn btn-small btn-archive" onclick="archiveShow(${show.id})">Arc</button>
+            </div>`;
+        }
+
+        return `
+          <div class="show-row">
+            <span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${from}${network}${notes}
+            <span class="show-spacer"></span>
+            ${actions}
+          </div>
+          <div class="show-actors" id="actors-${show.id}">
+            <div class="actor-list" id="actors-list-${show.id}"></div>
+          </div>`;
+      }).join('');
+
+      // Network counts at bottom
+      const networkCounts = {};
+      filtered.forEach(s => {
+        if (!s.network) return;
+        networkCounts[s.network] = (networkCounts[s.network] || 0) + 1;
+      });
+      const countsHtml = Object.entries(networkCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([n, c]) => `${n} (${c})`)
+        .join(' &middot; ');
+      container.innerHTML += `<div class="network-counts">${countsHtml}</div>`;
+    }
+
+    async function toggleActors(showId) {
+      const container = document.getElementById(`actors-${showId}`);
+      const arrow = document.getElementById(`arrow-${showId}`);
+      if (container.classList.contains('visible')) {
+        container.classList.remove('visible');
+        if (arrow) arrow.classList.remove('expanded');
+        return;
+      }
+      // Close any open actors
+      document.querySelectorAll('.show-actors.visible').forEach(el => el.classList.remove('visible'));
+      document.querySelectorAll('.show-arrow.expanded').forEach(el => el.classList.remove('expanded'));
+      container.classList.add('visible');
+      if (arrow) arrow.classList.add('expanded');
+      const list = document.getElementById(`actors-list-${showId}`);
+      if (list.children.length > 0) return;
+
+      list.innerHTML = '<span class="actor-tag">Loading...</span>';
+      try {
+        const res = await fetch(`/api/shows/${showId}/actors`);
+        const data = await res.json();
+        if (data.actors && data.actors.length > 0) {
+          list.innerHTML = data.actors.map(a => `<span class="actor-tag">${escapeHtml(a)}</span>`).join('');
+        } else {
+          list.innerHTML = '<span style="color:#bdc3c7;font-size:12px">No cast info</span>';
+        }
+      } catch (e) {
+        list.innerHTML = '<span style="color:#e74c3c;font-size:12px">Failed to load</span>';
+      }
+    }
+
+    function findOnNetwork() {
+      const title = document.getElementById('inputTitle').value.trim();
+      const network = document.getElementById('inputNetwork').value;
+      if (!title) { alert('Enter a show title first'); return; }
+      if (!network) { alert('Select a network first'); return; }
+      const base = NETWORK_SEARCH[network];
+      if (base) {
+        window.open(base + encodeURIComponent(title), '_blank');
+      }
+    }
+
+    function openAddModal() {
+      editingId = null;
+      document.getElementById('modalTitle').textContent = 'Add Show';
+      document.getElementById('modalSave').textContent = 'Add Show';
+      document.getElementById('inputTitle').value = '';
+      document.getElementById('inputNetwork').value = '';
+      document.getElementById('inputUrl').value = '';
+      document.getElementById('inputRecommended').value = '';
+      document.getElementById('inputNotes').value = '';
+      document.getElementById('inputMovie').checked = false;
+      document.getElementById('inputList').value = currentTab;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+      document.getElementById('inputTitle').focus();
+    }
+
+    function openEditModal(showId) {
+      const show = shows.find(s => s.id === showId);
+      if (!show) return;
+      editingId = showId;
+      document.getElementById('modalTitle').textContent = 'Edit Show';
+      document.getElementById('modalSave').textContent = 'Save Changes';
+      document.getElementById('inputTitle').value = show.title;
+      document.getElementById('inputNetwork').value = show.network || '';
+      document.getElementById('inputUrl').value = show.network_url || '';
+      document.getElementById('inputRecommended').value = show.recommended_by || '';
+      document.getElementById('inputNotes').value = show.notes || '';
+      document.getElementById('inputMovie').checked = !!show.movie;
+      document.getElementById('inputList').value = show.list;
+      document.getElementById('modalOverlay').classList.remove('hidden');
+      document.getElementById('inputTitle').focus();
+    }
+
+    function closeModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('modalOverlay').classList.add('hidden');
+    }
+
+    function cleanUrl(url) {
+      if (!url) return url;
+      url = url.split('?')[0];
+      if (url.includes('amazon.com/')) url = url.split('ref=')[0];
+      return url.replace(/\/+$/, '/');
+    }
+
+    async function saveShow() {
+      const title = document.getElementById('inputTitle').value.trim();
+      if (!title) { alert('Title is required'); return; }
+
+      const body = {
+        title,
+        network: document.getElementById('inputNetwork').value || null,
+        network_url: cleanUrl(document.getElementById('inputUrl').value.trim()) || null,
+        recommended_by: document.getElementById('inputRecommended').value.trim() || null,
+        notes: document.getElementById('inputNotes').value.trim() || null,
+        movie: document.getElementById('inputMovie').checked ? 1 : 0,
+        list: document.getElementById('inputList').value,
+      };
+
+      try {
+        let res;
+        if (editingId) {
+          res = await fetch(`/api/shows/${editingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+        } else {
+          res = await fetch('/api/shows', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+        }
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.error || 'Failed to save');
+          return;
+        }
+        const saved = await res.json();
+        closeModal();
+        // Update local data immediately so we don't wait on DB replication
+        if (editingId) {
+          const idx = shows.findIndex(s => s.id === editingId);
+          if (idx !== -1) shows[idx] = saved.show;
+        } else {
+          shows.push(saved.show);
+        }
+        renderShows();
+      } catch (e) {
+        alert('Failed to save show');
+      }
+    }
+
+    async function moveShow(showId, newList) {
+      if (!newList) return;
+      try {
+        const res = await fetch(`/api/shows/${showId}/move`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ list: newList }),
+        });
+        if (res.ok) {
+          const show = shows.find(s => s.id === showId);
+          if (show) show.list = newList;
+          renderShows();
+        }
+      } catch (e) {
+        alert('Failed to move show');
+      }
+    }
+
+    async function archiveShow(showId) {
+      const show = shows.find(s => s.id === showId);
+      if (!confirm(`Archive "${show?.title}"?`)) return;
+      try {
+        const res = await fetch(`/api/shows/${showId}/archive`, { method: 'PUT' });
+        if (res.ok) {
+          shows = shows.filter(s => s.id !== showId);
+          renderShows();
+        }
+      } catch (e) {
+        alert('Failed to archive show');
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function openSuggestModal() {
+      document.getElementById('suggestName').value = '';
+      document.getElementById('suggestTitle').value = '';
+      document.getElementById('suggestNetwork').value = '';
+      document.getElementById('suggestNotes').value = '';
+      document.getElementById('suggestOverlay').classList.remove('hidden');
+      document.getElementById('suggestName').focus();
+    }
+
+    function closeSuggestModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('suggestOverlay').classList.add('hidden');
+    }
+
+    const QUIPS = {
+      watching: [
+        `Great minds think alike! ${OWNERS} are watching this right now!`,
+        `You're in sync! They're already binging this one!`,
+        `Already on the screen! ${OWNERS} are watching this as we speak!`,
+      ],
+      waiting: [
+        `Same! ${OWNERS} are waiting on the next season too!`,
+        `They're already counting the days until the next season drops!`,
+        `Join the waiting club! ${OWNERS} are right there with you!`,
+      ],
+      recommending: [
+        `Good taste! ${OWNERS} loved this one!`,
+        `You know what's good! They'd totally recommend this too!`,
+        `${OWNERS} approve! This one's on their recommend list!`,
+      ],
+      next: [
+        `It's already on the list! ${OWNERS} are planning to watch this!`,
+        `Noted! Someone else beat you to it — it's already queued up!`,
+        `Already in the queue! Great suggestion though!`,
+      ],
+    };
+
+    function getQuip(list) {
+      const q = QUIPS[list];
+      return q[Math.floor(Math.random() * q.length)];
+    }
+
+    async function submitSuggestion() {
+      const name = document.getElementById('suggestName').value.trim();
+      const title = document.getElementById('suggestTitle').value.trim();
+      const network = document.getElementById('suggestNetwork').value || null;
+      const notes = document.getElementById('suggestNotes').value.trim() || null;
+      if (!title) { alert('Show title is required'); return; }
+      if (!name) { alert('Your name is required'); return; }
+
+      // Check if already in the database
+      const match = shows.find(s => s.title.toLowerCase() === title.toLowerCase());
+      if (match) {
+        alert(getQuip(match.list));
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/suggestions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, network, recommended_by: name, notes, movie: document.getElementById('suggestMovie').checked ? 1 : 0 }),
+        });
+        if (res.ok) {
+          closeSuggestModal();
+          alert(`Thanks! Your suggestion has been sent to ${OWNERS}!`);
+          await loadShows();
+        } else {
+          alert('Failed to send suggestion');
+        }
+      } catch (e) {
+        alert('Failed to send suggestion');
+      }
+    }
+
+    // Init
+    document.title = APP_TITLE;
+    document.getElementById('appTitle').textContent = APP_TITLE;
+    const hash = window.location.hash.replace('#', '');
+    if (['watching', 'waiting', 'recommending', 'next'].includes(hash)) {
+      currentTab = hash;
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.list === hash);
+      });
+      updateDesc();
+    }
+    checkAuth();
+    loadShows();
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+  </script>
+</body>
+</html>

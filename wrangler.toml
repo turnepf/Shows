@@ -1,0 +1,8 @@
+name = "shows"
+pages_build_output_dir = "."
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "shows-db"
+database_id = "40fa60cf-5cc0-42f0-9d31-5f32b965472b"
