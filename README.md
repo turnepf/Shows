@@ -17,20 +17,23 @@ A shared TV show and movie tracker built on Cloudflare Pages + D1. Track what yo
 
 ## Setup with Claude
 
-The easiest way to set up your own instance is to use [Claude Code](https://claude.ai/code). Give Claude these instructions:
+The easiest way to set up your own instance is with [Claude Code](https://claude.ai/code). Just paste this into Claude:
 
-> Set up the Show Tracker app from this repo on my Cloudflare account. Here's what I need:
->
-> 1. Create a D1 database called `shows-db` and update `wrangler.toml` with the database ID
-> 2. Run `schema.sql` against the database
-> 3. Run `seed-sample.sql` to load sample data (or I'll provide my own)
-> 4. Create a Cloudflare Pages project and deploy
-> 5. Set up these secrets:
->    - `OMDB_API_KEY` — get a free key at [omdbapi.com](http://www.omdbapi.com/apikey.aspx)
->    - `LOGIN_CODE_1` — a 4-digit code for the first editor
->    - `LOGIN_CODE_2` — a 4-digit code for the second editor
-> 6. Update the login codes in `functions/auth/login.js` to match the secret names
-> 7. Update `APP_TITLE` and `OWNERS` at the top of the script in `index.html`
+```
+Clone https://github.com/turnepf/Shows and set it up on my Cloudflare account. Walk me through each step:
+
+1. Clone the repo
+2. Create a Cloudflare D1 database called "shows-db" and update wrangler.toml with the database ID
+3. Run schema.sql against the database
+4. Run seed-sample.sql to load sample data
+5. Ask me for my app title and names to customize APP_TITLE and OWNERS in index.html
+6. Ask me for two 4-digit login codes and two editor names, then update functions/auth/login.js and set the Cloudflare Pages secrets
+7. Ask me for my OMDB API key (free at omdbapi.com) and set it as a secret
+8. Create a Cloudflare Pages project and deploy
+9. Optionally set up a custom domain
+```
+
+Claude will walk you through it interactively.
 
 ## Manual Setup
 
@@ -42,40 +45,46 @@ The easiest way to set up your own instance is to use [Claude Code](https://clau
 
 ### Steps
 
-1. **Customize the app** — Edit `index.html` and change `APP_TITLE` and `OWNERS` near the top of the `<script>` block:
+1. **Clone the repo:**
+   ```bash
+   git clone https://github.com/turnepf/Shows.git
+   cd Shows
+   ```
+
+2. **Customize the app** — Edit `index.html` and change `APP_TITLE` and `OWNERS` near the top of the `<script>` block:
    ```js
    const APP_TITLE = "Your App Title";
    const OWNERS = "Your Names";
    ```
 
-2. **Create the database:**
+3. **Create the database:**
    ```bash
    wrangler d1 create shows-db
    ```
    Copy the `database_id` from the output into `wrangler.toml`.
 
-3. **Set up the schema and sample data:**
+4. **Set up the schema and sample data:**
    ```bash
    wrangler d1 execute shows-db --remote --file=schema.sql
    wrangler d1 execute shows-db --remote --file=seed-sample.sql
    ```
 
-4. **Update login codes** — Edit `functions/auth/login.js` and set the secret names and editor names to match your setup.
+5. **Update login codes** — Edit `functions/auth/login.js` and change the secret names and editor names to match your setup.
 
-5. **Deploy:**
+6. **Deploy:**
    ```bash
    wrangler pages project create shows
    wrangler pages deploy . --project-name shows
    ```
 
-6. **Set secrets:**
+7. **Set secrets:**
    ```bash
    echo "your-omdb-key" | wrangler pages secret put OMDB_API_KEY --project-name shows
    echo "1234" | wrangler pages secret put LOGIN_CODE_1 --project-name shows
    echo "5678" | wrangler pages secret put LOGIN_CODE_2 --project-name shows
    ```
 
-7. **(Optional) Add a custom domain** — In the Cloudflare dashboard, go to Pages > your project > Custom domains.
+8. **(Optional) Add a custom domain** — In the Cloudflare dashboard, go to Pages > your project > Custom domains.
 
 ## Tech Stack
 
@@ -106,21 +115,6 @@ The easiest way to set up your own instance is to use [Claude Code](https://clau
         ├── logout.js       Clear session
         └── check.js        Check auth status
 ```
-
-## Database
-
-Schema is in `schema.sql`. Tables:
-
-- **shows** — title, network, network_url, recommended_by, rating, list, notes, movie, archived
-- **actors** — show_id, name (cast members from OMDB)
-- **sessions** — login sessions
-- **suggestions** — (legacy, suggestions now go directly into shows)
-
-## URL Cleaning
-
-The app automatically cleans pasted URLs:
-- Strips everything after `?` (tracking params)
-- For Amazon, also strips `ref=` and beyond
 
 ## License
 
