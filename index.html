@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Ali & Patrick's Shows</title>
+  <title>Shows</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,9 +11,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html, body {
-      overflow-x: hidden;
-    }
+    html, body { overflow-x: hidden; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -58,24 +56,6 @@
       border: 1px solid rgba(255,255,255,0.3);
     }
     .btn-login:hover { background: rgba(255,255,255,0.25); }
-
-    .fab-suggest {
-      position: fixed;
-      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-      right: 20px;
-      background: #2C3E50;
-      color: #fff;
-      border: none;
-      border-radius: 24px;
-      padding: 12px 20px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 50;
-      font-family: inherit;
-    }
-    .fab-suggest:hover { background: #1a252f; }
 
     .btn-add { background: #E67E22; color: #fff; }
     .btn-add:hover { background: #d35400; }
@@ -125,27 +105,15 @@
       gap: 8px;
     }
 
-    .show-info {
-      flex: 1;
-      min-width: 0;
-      line-height: 1.4;
-    }
-
     .show-row:last-child { border-bottom: none; }
 
-    .show-title {
-      font-weight: 600;
-      color: #2C3E50;
-    }
+    .show-info { flex: 1; min-width: 0; line-height: 1.4; }
 
+    .show-title { font-weight: 600; color: #2C3E50; }
     .show-title.clickable { cursor: pointer; }
     .show-title.clickable:hover { color: #E67E22; }
 
-    .show-movie {
-      font-weight: 400;
-      color: #95a5a6;
-      font-size: 12px;
-    }
+    .show-movie { font-weight: 400; color: #95a5a6; font-size: 12px; }
 
     .show-arrow {
       font-size: 10px;
@@ -156,86 +124,67 @@
     }
     .show-arrow.expanded { transform: rotate(90deg); }
 
-    .show-rating {
-      color: #7f8c8d;
-      font-size: 13px;
-      white-space: nowrap;
-    }
+    .show-rating { color: #7f8c8d; font-size: 13px; white-space: nowrap; }
     .show-rating .star { color: #f1c40f; }
 
-    .show-network {
-      color: #3498db;
-      text-decoration: none;
-      font-size: 13px;
-      white-space: nowrap;
-    }
+    .show-network { color: #3498db; text-decoration: none; font-size: 13px; white-space: nowrap; }
     .show-network:hover { text-decoration: underline; }
 
-    .show-network-plain {
-      color: #7f8c8d;
-      font-size: 13px;
-      white-space: nowrap;
-    }
+    .show-network-plain { color: #7f8c8d; font-size: 13px; white-space: nowrap; }
 
-    .show-from {
-      color: #95a5a6;
-      font-size: 13px;
-      white-space: nowrap;
-    }
+    .show-from { color: #95a5a6; font-size: 13px; white-space: nowrap; }
+    .show-on { color: #95a5a6; font-size: 13px; }
+    .show-notes-inline { color: #aaa; font-size: 12px; font-style: italic; white-space: nowrap; }
 
-    .show-on {
-      color: #95a5a6;
-      font-size: 13px;
-    }
+    .show-actions-inline { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+    .show-actions-inline select { padding: 3px 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px; background: #fff; }
 
-    .show-notes-inline {
-      color: #aaa;
-      font-size: 12px;
-      font-style: italic;
-      white-space: nowrap;
-    }
-
-
-
-    .show-actions-inline {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
-    .show-actions-inline select {
-      padding: 3px 4px;
-      font-size: 11px;
-      border: 1px solid #ddd;
-      border-radius: 3px;
-      background: #fff;
-    }
-
-    .show-actors {
-      padding: 4px 0 8px 16px;
-      display: none;
-      font-size: 13px;
-      color: #5a5a5a;
-    }
+    .show-actors { padding: 4px 0 8px 16px; display: none; font-size: 13px; color: #5a5a5a; }
     .show-actors.visible { display: block; }
-
     .actor-list { display: flex; flex-wrap: wrap; gap: 4px; }
-    .actor-tag {
-      background: #f0ebe3;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 12px;
-    }
+    .actor-tag { background: #f0ebe3; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
 
-    .network-counts {
-      text-align: center;
-      font-size: 12px;
-      color: #95a5a6;
-      padding: 12px 0 4px;
+    .network-counts { text-align: center; font-size: 12px; color: #95a5a6; padding: 12px 0 4px; }
+
+    .fab-suggest {
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      right: 20px;
+      background: #2C3E50;
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 50;
+      font-family: inherit;
     }
+    .fab-suggest:hover { background: #1a252f; }
 
     .hidden { display: none !important; }
+
+    /* Landing page */
+    .landing { max-width: 500px; margin: 60px auto; padding: 0 20px; text-align: center; }
+    .landing h1 { font-size: 28px; color: #2C3E50; margin-bottom: 8px; }
+    .landing p { color: #7f8c8d; margin-bottom: 30px; }
+    .household-list { display: flex; flex-direction: column; gap: 12px; }
+    .household-card {
+      display: block;
+      background: #fff;
+      border: 1px solid #e8e0d4;
+      border-radius: 10px;
+      padding: 18px 20px;
+      text-decoration: none;
+      color: #2C3E50;
+      font-size: 18px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .household-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); transform: translateY(-1px); }
 
     /* Modal */
     .modal-overlay {
@@ -286,36 +235,16 @@
 
     .url-row { display: flex; gap: 8px; align-items: center; }
     .url-row input { flex: 1; }
-    .btn-find {
-      padding: 10px 12px;
-      background: #3498db;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-size: 13px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
+    .btn-find { padding: 10px 12px; background: #3498db; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; }
     .btn-find:hover { background: #2980b9; }
 
     .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      color: #5a5a5a;
-      margin-top: 12px;
-      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 14px; color: #5a5a5a; margin-top: 12px; cursor: pointer;
     }
     .checkbox-label input { width: auto; margin: 0; }
 
-    .modal-actions {
-      margin-top: 20px;
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-    }
-
+    .modal-actions { margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end; }
     .btn-cancel { background: #ecf0f1; color: #2C2C2C; }
     .btn-cancel:hover { background: #dfe6e9; }
     .btn-save { background: #E67E22; color: #fff; }
@@ -326,7 +255,7 @@
 
     @media (max-width: 480px) {
       .header-top h1 { font-size: 18px; }
-      .tab { padding: 10px 12px; font-size: 13px; }
+      .tab { padding: 10px 0; font-size: 12px; }
       main { padding: 8px 12px; }
       .show-row { font-size: 13px; }
       .show-actions-inline .btn-small { padding: 3px 6px; font-size: 10px; }
@@ -334,28 +263,43 @@
   </style>
 </head>
 <body>
-  <header>
-    <div class="header-top">
-      <h1 id="appTitle">Ali & Patrick's Shows</h1>
-      <div class="header-actions">
-        <button class="btn btn-add hidden" id="addBtn" onclick="openAddModal()">+ Add</button>
-        <button class="btn btn-login" id="loginBtn" onclick="login()">Login</button>
-      </div>
-    </div>
-    <div class="tabs" id="tabs">
-      <div class="tab active" data-list="watching" onclick="switchTab('watching')">Watching</div>
-      <div class="tab" data-list="waiting" onclick="switchTab('waiting')">Waiting</div>
-      <div class="tab" data-list="recommending" onclick="switchTab('recommending')">Recommending</div>
-      <div class="tab" data-list="next" onclick="switchTab('next')">Up Next</div>
-    </div>
-    <div class="section-desc" id="sectionDesc">What we're watching now.</div>
-  </header>
 
-  <main>
-    <div class="loading" id="loading">Loading shows...</div>
-    <div class="show-list" id="showList"></div>
-    <div class="empty hidden" id="empty">No shows in this list yet.</div>
-  </main>
+  <!-- Landing Page -->
+  <div id="landingPage" class="hidden">
+    <div class="landing">
+      <h1>Show Tracker</h1>
+      <p>Pick a household to see their shows.</p>
+      <div class="household-list" id="householdList"></div>
+    </div>
+  </div>
+
+  <!-- Household Show Page -->
+  <div id="showPage" class="hidden">
+    <header>
+      <div class="header-top">
+        <h1 id="appTitle"></h1>
+        <div class="header-actions">
+          <button class="btn btn-add hidden" id="addBtn" onclick="openAddModal()">+ Add</button>
+          <button class="btn btn-login" id="loginBtn" onclick="login()">Login</button>
+        </div>
+      </div>
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-list="watching" onclick="switchTab('watching')">Watching</div>
+        <div class="tab" data-list="waiting" onclick="switchTab('waiting')">Waiting</div>
+        <div class="tab" data-list="recommending" onclick="switchTab('recommending')">Recommending</div>
+        <div class="tab" data-list="next" onclick="switchTab('next')">Up Next</div>
+      </div>
+      <div class="section-desc" id="sectionDesc"></div>
+    </header>
+
+    <main>
+      <div class="loading" id="loading">Loading shows...</div>
+      <div class="show-list" id="showList"></div>
+      <div class="empty hidden" id="empty">No shows in this list yet.</div>
+    </main>
+
+    <button class="fab-suggest" id="suggestBtn" onclick="openSuggestModal()">Suggest a Show</button>
+  </div>
 
   <!-- Add/Edit Modal -->
   <div class="modal-overlay hidden" id="modalOverlay" onclick="closeModal(event)">
@@ -391,7 +335,7 @@
       <input type="text" id="inputRecommended" placeholder="e.g. Whitt, TC">
 
       <label for="inputNotes">Notes</label>
-      <input type="text" id="inputNotes" placeholder="e.g. @Patrick, Movie, Harlan Coben">
+      <input type="text" id="inputNotes" placeholder="e.g. Movie, Harlan Coben">
 
       <label class="checkbox-label"><input type="checkbox" id="inputMovie"> Movie</label>
 
@@ -409,8 +353,6 @@
       </div>
     </div>
   </div>
-
-  <button class="fab-suggest" id="suggestBtn" onclick="openSuggestModal()">Suggest a Show</button>
 
   <!-- Suggest Modal -->
   <div class="modal-overlay hidden" id="suggestOverlay" onclick="closeSuggestModal(event)">
@@ -452,22 +394,17 @@
   </div>
 
   <script>
-    // ======= CUSTOMIZE THESE FOR YOUR OWN SETUP =======
-    const APP_TITLE = "Ali & Patrick's Shows";
-    const OWNERS = "Patrick & Ali";
-    // =====================================================
-
     const NETWORK_SEARCH = {
-      'Netflix': { base: 'https://www.netflix.com/search', param: null },
+      'Netflix': { base: 'https://www.netflix.com/search' },
       'HBO': { base: 'https://play.max.com/search', param: 'q' },
       'Apple TV': { base: 'https://tv.apple.com/search', param: 'term' },
-      'Hulu': { base: 'https://www.hulu.com/search', param: null },
-      'Paramount': { base: 'https://www.paramountplus.com/search', param: null },
-      'Bravo': { base: 'https://www.peacocktv.com/watch/search', param: null },
-      'Peacock': { base: 'https://www.peacocktv.com/watch/search', param: null },
+      'Hulu': { base: 'https://www.hulu.com/search' },
+      'Paramount': { base: 'https://www.paramountplus.com/search' },
+      'Bravo': { base: 'https://www.peacocktv.com/watch/search' },
+      'Peacock': { base: 'https://www.peacocktv.com/watch/search' },
       'Amazon': { base: 'https://www.amazon.com/s', param: 'k', extra: 'i=instant-video' },
-      'Disney+': { base: 'https://www.disneyplus.com/search', param: null },
-      'NBC': { base: 'https://www.nbc.com/search', param: null },
+      'Disney+': { base: 'https://www.disneyplus.com/search' },
+      'NBC': { base: 'https://www.nbc.com/search' },
       'Starz': { base: 'https://www.starz.com/search', param: 'q' },
       'Showtime': { base: 'https://www.sho.com/search', param: 'q' },
     };
@@ -486,12 +423,87 @@
     let currentTab = 'watching';
     let isEditor = false;
     let editingId = null;
+    let householdSlug = null;
+    let householdName = '';
+    let owners = '';
+
+    const SECTION_DESCS = {
+      watching: "What we're watching now.",
+      waiting: "Waiting on the next season to drop.",
+      recommending: "We've watched it and we'd recommend it.",
+      next: "Shows that have been recommended but we haven't watched.",
+    };
+
+    // Determine if we're on landing page or household page
+    const path = window.location.pathname.replace(/\/$/, '');
+    const slug = path.substring(1); // remove leading /
+
+    if (!slug) {
+      showLanding();
+    } else {
+      showHousehold(slug);
+    }
+
+    async function showLanding() {
+      document.getElementById('landingPage').classList.remove('hidden');
+      document.title = 'Show Tracker';
+      try {
+        const res = await fetch('/api/households');
+        const data = await res.json();
+        const list = document.getElementById('householdList');
+        list.innerHTML = data.households.map(h =>
+          `<a class="household-card" href="/${h.slug}">${escapeHtml(h.name)}</a>`
+        ).join('');
+      } catch (e) {
+        document.getElementById('householdList').innerHTML = '<p>Failed to load.</p>';
+      }
+    }
+
+    async function showHousehold(slug) {
+      householdSlug = slug;
+      document.getElementById('showPage').classList.remove('hidden');
+
+      // Get household name
+      try {
+        const res = await fetch('/api/households');
+        const data = await res.json();
+        const h = data.households.find(h => h.slug === slug);
+        if (h) {
+          householdName = h.name;
+          owners = h.name.replace("'s Shows", '').replace("' Shows", '');
+        } else {
+          householdName = 'Shows';
+          owners = 'the owners';
+        }
+      } catch (e) {
+        householdName = 'Shows';
+        owners = 'the owners';
+      }
+
+      document.title = householdName;
+      document.getElementById('appTitle').textContent = householdName;
+
+      // Check hash for tab
+      const hash = window.location.hash.replace('#', '');
+      if (['watching', 'waiting', 'recommending', 'next'].includes(hash)) {
+        currentTab = hash;
+        document.querySelectorAll('.tab').forEach(t => {
+          t.classList.toggle('active', t.dataset.list === hash);
+        });
+      }
+      updateDesc();
+
+      checkAuth();
+      loadShows();
+      fetch(`/api/enrich?household=${slug}`).catch(() => {});
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+    }
 
     async function checkAuth() {
       try {
         const res = await fetch('/auth/check');
         const data = await res.json();
-        if (data.authenticated) {
+        if (data.authenticated && data.household === householdSlug) {
           isEditor = true;
           document.getElementById('addBtn').classList.remove('hidden');
           document.getElementById('suggestBtn').classList.add('hidden');
@@ -504,7 +516,7 @@
     function login() {
       const code = prompt('Enter 4-digit code:');
       if (!code) return;
-      window.location.href = '/auth/login?code=' + encodeURIComponent(code);
+      window.location.href = '/auth/login?code=' + encodeURIComponent(code) + '&household=' + encodeURIComponent(householdSlug);
     }
 
     async function logout() {
@@ -513,7 +525,7 @@
 
     async function loadShows() {
       try {
-        const res = await fetch('/api/shows');
+        const res = await fetch(`/api/shows?household=${householdSlug}`);
         const data = await res.json();
         shows = data.shows || [];
         renderShows();
@@ -521,13 +533,6 @@
         document.getElementById('loading').textContent = 'Failed to load shows.';
       }
     }
-
-    const SECTION_DESCS = {
-      watching: "What we're watching now.",
-      waiting: "Waiting on the next season to drop.",
-      recommending: "We've watched it and we'd recommend it.",
-      next: "Shows that have been recommended but we haven't watched.",
-    };
 
     function updateDesc() {
       const count = shows.filter(s => s.list === currentTab).length;
@@ -603,7 +608,7 @@
           </div>`;
       }).join('');
 
-      // Network counts at bottom
+      // Network counts
       const networkCounts = {};
       filtered.forEach(s => {
         if (!s.network) return;
@@ -613,7 +618,7 @@
         .sort((a, b) => b[1] - a[1])
         .map(([n, c]) => `${n} (${c})`)
         .join(' &middot; ');
-      container.innerHTML += `<div class="network-counts">${countsHtml}</div>`;
+      if (countsHtml) container.innerHTML += `<div class="network-counts">${countsHtml}</div>`;
     }
 
     async function toggleActors(showId) {
@@ -624,7 +629,6 @@
         if (arrow) arrow.classList.remove('expanded');
         return;
       }
-      // Close any open actors
       document.querySelectorAll('.show-actors.visible').forEach(el => el.classList.remove('visible'));
       document.querySelectorAll('.show-arrow.expanded').forEach(el => el.classList.remove('expanded'));
       container.classList.add('visible');
@@ -722,8 +726,7 @@
             body: JSON.stringify(body),
           });
         } else {
-          // Check for existing (including archived) before adding
-          const checkRes = await fetch('/api/shows/check?title=' + encodeURIComponent(title));
+          const checkRes = await fetch(`/api/shows/check?title=${encodeURIComponent(title)}&household=${householdSlug}`);
           const check = await checkRes.json();
           if (check.exists) {
             if (check.archived) {
@@ -768,7 +771,6 @@
         }
         const saved = await res.json();
         closeModal();
-        // Update local data immediately so we don't wait on DB replication
         if (editingId) {
           const idx = shows.findIndex(s => s.id === editingId);
           if (idx !== -1) shows[idx] = saved.show;
@@ -813,11 +815,38 @@
       }
     }
 
-    function escapeHtml(str) {
-      if (!str) return '';
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
+    // Suggest
+    const ARCHIVED_QUIPS = [
+      "They've seen this one, but it didn't make the cut!",
+      "Been there, watched that! They moved on from this one.",
+      "They gave it a shot but it's not on their list anymore.",
+    ];
+
+    const QUIPS = {
+      watching: [
+        "Great minds think alike! They're watching this right now!",
+        "You're in sync! They're already binging this one!",
+        "Already on the screen!",
+      ],
+      waiting: [
+        "Same! They're waiting on the next season too!",
+        "They're already counting the days until the next season drops!",
+        "Join the waiting club!",
+      ],
+      recommending: [
+        "Good taste! They loved this one!",
+        "You know what's good! They'd totally recommend this too!",
+      ],
+      next: [
+        "It's already on the list! They're planning to watch this!",
+        "Someone else beat you to it — it's already queued up!",
+        "Already in the queue! Great suggestion though!",
+      ],
+    };
+
+    function getQuip(list) {
+      const q = QUIPS[list];
+      return q[Math.floor(Math.random() * q.length)];
     }
 
     function openSuggestModal() {
@@ -834,40 +863,6 @@
       document.getElementById('suggestOverlay').classList.add('hidden');
     }
 
-    const ARCHIVED_QUIPS = [
-      `${OWNERS} have seen this one, but it didn't make the cut!`,
-      `Been there, watched that! ${OWNERS} moved on from this one.`,
-      `${OWNERS} gave it a shot but it's not on their list anymore.`,
-    ];
-
-    const QUIPS = {
-      watching: [
-        `Great minds think alike! ${OWNERS} are watching this right now!`,
-        `You're in sync! They're already binging this one!`,
-        `Already on the screen! ${OWNERS} are watching this as we speak!`,
-      ],
-      waiting: [
-        `Same! ${OWNERS} are waiting on the next season too!`,
-        `They're already counting the days until the next season drops!`,
-        `Join the waiting club! ${OWNERS} are right there with you!`,
-      ],
-      recommending: [
-        `Good taste! ${OWNERS} loved this one!`,
-        `You know what's good! They'd totally recommend this too!`,
-        `${OWNERS} approve! This one's on their recommend list!`,
-      ],
-      next: [
-        `It's already on the list! ${OWNERS} are planning to watch this!`,
-        `Noted! Someone else beat you to it — it's already queued up!`,
-        `Already in the queue! Great suggestion though!`,
-      ],
-    };
-
-    function getQuip(list) {
-      const q = QUIPS[list];
-      return q[Math.floor(Math.random() * q.length)];
-    }
-
     async function submitSuggestion() {
       const name = document.getElementById('suggestName').value.trim();
       const title = document.getElementById('suggestTitle').value.trim();
@@ -880,7 +875,7 @@
         const res = await fetch('/api/suggestions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, network, recommended_by: name, notes, movie: document.getElementById('suggestMovie').checked ? 1 : 0 }),
+          body: JSON.stringify({ title, network, recommended_by: name, notes, movie: document.getElementById('suggestMovie').checked ? 1 : 0, household: householdSlug }),
         });
         const data = await res.json();
         if (data.duplicate) {
@@ -892,7 +887,7 @@
           }
         } else if (data.success) {
           closeSuggestModal();
-          alert(`Thanks! Your suggestion has been sent to ${OWNERS}!`);
+          alert(`Thanks! Your suggestion has been sent!`);
           await loadShows();
         } else {
           alert(data.error || 'Failed to send suggestion');
@@ -902,24 +897,15 @@
       }
     }
 
-    // Init
-    document.title = APP_TITLE;
-    document.getElementById('appTitle').textContent = APP_TITLE;
-    const hash = window.location.hash.replace('#', '');
-    if (['watching', 'waiting', 'recommending', 'next'].includes(hash)) {
-      currentTab = hash;
-      document.querySelectorAll('.tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.list === hash);
-      });
-      updateDesc();
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
     }
-    checkAuth();
-    loadShows();
-    fetch('/api/enrich').catch(() => {});
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeModal();
+      if (e.key === 'Escape') { closeModal(); closeSuggestModal(); }
     });
   </script>
 </body>

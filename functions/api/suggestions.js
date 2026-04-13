@@ -1,8 +1,5 @@
 function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'application/json',
-  };
+  return { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
 }
 
 async function tryOMDB(title, apiKey) {
@@ -63,16 +60,16 @@ async function fetchOMDB(title, env) {
 export async function onRequestPost(context) {
   const { env, request } = context;
   const body = await request.json();
-  const { title, network, recommended_by, notes, movie } = body;
+  const { title, network, recommended_by, notes, movie, household } = body;
 
-  if (!title) {
-    return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400, headers: corsHeaders() });
+  if (!title || !household) {
+    return new Response(JSON.stringify({ error: 'Title and household are required' }), { status: 400, headers: corsHeaders() });
   }
 
   // Check for existing show (including archived)
   const existing = await env.DB.prepare(
-    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?)'
-  ).bind(title).first();
+    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?) AND household_slug = ?'
+  ).bind(title, household).first();
 
   if (existing) {
     if (existing.archived) {
@@ -84,11 +81,11 @@ export async function onRequestPost(context) {
   const omdb = await fetchOMDB(title, env);
   const finalTitle = omdb.canonicalTitle || title;
 
-  // Check again with canonical title (e.g. "Land Man" -> "Landman" might already exist)
+  // Check again with canonical title
   if (finalTitle.toLowerCase() !== title.toLowerCase()) {
     const dupeCheck = await env.DB.prepare(
-      'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?)'
-    ).bind(finalTitle).first();
+      'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?) AND household_slug = ?'
+    ).bind(finalTitle, household).first();
     if (dupeCheck) {
       if (dupeCheck.archived) {
         return new Response(JSON.stringify({ duplicate: true, archived: true }), { headers: corsHeaders() });
@@ -97,13 +94,11 @@ export async function onRequestPost(context) {
     }
   }
 
-  const suggestionNote = notes
-    ? `Suggested · ${notes}`
-    : 'Suggested';
+  const suggestionNote = notes ? `Suggested · ${notes}` : 'Suggested';
 
   const result = await env.DB.prepare(
-    'INSERT INTO shows (title, network, recommended_by, rating, list, notes, movie) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).bind(finalTitle, network || null, recommended_by || null, omdb.rating, 'next', suggestionNote, movie || 0).run();
+    'INSERT INTO shows (title, network, recommended_by, rating, list, notes, movie, household_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(finalTitle, network || null, recommended_by || null, omdb.rating, 'next', suggestionNote, movie || 0, household).run();
 
   const showId = result.meta.last_row_id;
   if (omdb.actors.length > 0) {

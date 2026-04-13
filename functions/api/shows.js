@@ -32,21 +32,18 @@ function cleanUrl(url) {
 }
 
 function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'application/json',
-  };
+  return { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
 }
 
-async function verifyAuth(request, env) {
+async function getSession(request, env) {
   const cookie = request.headers.get('Cookie') || '';
   const match = cookie.match(/session=([^;]+)/);
   if (!match) return null;
   try {
     const session = await env.DB.prepare(
-      'SELECT email, expires_at FROM sessions WHERE id = ?'
+      'SELECT email, household_slug, expires_at FROM sessions WHERE id = ?'
     ).bind(match[1]).first();
-    if (session && new Date(session.expires_at) > new Date()) return session.email;
+    if (session && new Date(session.expires_at) > new Date()) return session;
   } catch (e) {}
   return null;
 }
@@ -107,19 +104,23 @@ async function fetchOMDB(title, env) {
 }
 
 export async function onRequestGet(context) {
-  const { env } = context;
-  const db = env.DB;
-  const { results } = await db.prepare(
+  const { env, request } = context;
+  const url = new URL(request.url);
+  const household = url.searchParams.get('household');
+  if (!household) {
+    return new Response(JSON.stringify({ error: 'household required' }), { status: 400, headers: corsHeaders() });
+  }
+  const { results } = await env.DB.prepare(
     `SELECT s.*, (SELECT COUNT(*) FROM actors a WHERE a.show_id = s.id) as actor_count
-     FROM shows s WHERE s.archived = 0 ORDER BY s.title COLLATE NOCASE`
-  ).all();
+     FROM shows s WHERE s.archived = 0 AND s.household_slug = ? ORDER BY s.title COLLATE NOCASE`
+  ).bind(household).all();
   return new Response(JSON.stringify({ shows: results }), { headers: corsHeaders() });
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const user = await verifyAuth(request, env);
-  if (!user) {
+  const session = await getSession(request, env);
+  if (!session) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders() });
   }
 
@@ -132,10 +133,9 @@ export async function onRequestPost(context) {
   const omdb = await fetchOMDB(title, env);
   const finalTitle = omdb.canonicalTitle || title;
 
-  // Check if canonical title already exists
   const existing = await env.DB.prepare(
-    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?)'
-  ).bind(finalTitle).first();
+    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?) AND household_slug = ?'
+  ).bind(finalTitle, session.household_slug).first();
   if (existing) {
     if (existing.archived) {
       return new Response(JSON.stringify({ error: 'exists_archived', id: existing.id, title: finalTitle }), { status: 409, headers: corsHeaders() });
@@ -146,11 +146,10 @@ export async function onRequestPost(context) {
   const url = cleanUrl(network_url) || generateNetworkUrl(network, finalTitle);
 
   const result = await env.DB.prepare(
-    'INSERT INTO shows (title, network, network_url, recommended_by, rating, list, notes, movie) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(finalTitle, network || null, url, recommended_by || null, omdb.rating, list, notes || null, movie || 0).run();
+    'INSERT INTO shows (title, network, network_url, recommended_by, rating, list, notes, movie, household_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(finalTitle, network || null, url, recommended_by || null, omdb.rating, list, notes || null, movie || 0, session.household_slug).run();
 
   const showId = result.meta.last_row_id;
-
   if (omdb.actors.length > 0) {
     const stmt = env.DB.prepare('INSERT INTO actors (show_id, name) VALUES (?, ?)');
     await env.DB.batch(omdb.actors.map(actor => stmt.bind(showId, actor)));
@@ -164,8 +163,8 @@ export async function onRequestOptions() {
   return new Response(null, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Cf-Access-Jwt-Assertion',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
 }

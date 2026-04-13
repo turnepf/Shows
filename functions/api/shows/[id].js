@@ -6,10 +6,20 @@ function cleanUrl(url) {
 }
 
 function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Content-Type': 'application/json',
-  };
+  return { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
+}
+
+async function getSession(request, env) {
+  const cookie = request.headers.get('Cookie') || '';
+  const match = cookie.match(/session=([^;]+)/);
+  if (!match) return null;
+  try {
+    const session = await env.DB.prepare(
+      'SELECT email, household_slug, expires_at FROM sessions WHERE id = ?'
+    ).bind(match[1]).first();
+    if (session && new Date(session.expires_at) > new Date()) return session;
+  } catch (e) {}
+  return null;
 }
 
 async function tryOMDB(title, apiKey) {
@@ -67,19 +77,6 @@ async function fetchOMDB(title, env) {
   return { canonicalTitle: null, rating: null, actors: [] };
 }
 
-async function verifyAuth(request, env) {
-  const cookie = request.headers.get('Cookie') || '';
-  const match = cookie.match(/session=([^;]+)/);
-  if (!match) return null;
-  try {
-    const session = await env.DB.prepare(
-      'SELECT email, expires_at FROM sessions WHERE id = ?'
-    ).bind(match[1]).first();
-    if (session && new Date(session.expires_at) > new Date()) return session.email;
-  } catch (e) {}
-  return null;
-}
-
 export async function onRequestGet(context) {
   const { env, params } = context;
   const show = await env.DB.prepare('SELECT * FROM shows WHERE id = ?').bind(params.id).first();
@@ -91,12 +88,12 @@ export async function onRequestGet(context) {
 
 export async function onRequestPut(context) {
   const { request, env, params } = context;
-  const user = await verifyAuth(request, env);
-  if (!user) {
+  const session = await getSession(request, env);
+  if (!session) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders() });
   }
 
-  const existing = await env.DB.prepare('SELECT * FROM shows WHERE id = ?').bind(params.id).first();
+  const existing = await env.DB.prepare('SELECT * FROM shows WHERE id = ? AND household_slug = ?').bind(params.id, session.household_slug).first();
   if (!existing) {
     return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: corsHeaders() });
   }
@@ -112,15 +109,13 @@ export async function onRequestPut(context) {
   const movie = val('movie');
   const archived = val('archived');
 
-  // Refresh rating and actors from OMDB
   const omdb = await fetchOMDB(title, env);
   const rating = omdb.rating || existing.rating;
 
   await env.DB.prepare(
-    'UPDATE shows SET title = ?, network = ?, network_url = ?, recommended_by = ?, list = ?, notes = ?, movie = ?, rating = ?, archived = ?, updated_at = datetime(\'now\') WHERE id = ?'
+    "UPDATE shows SET title = ?, network = ?, network_url = ?, recommended_by = ?, list = ?, notes = ?, movie = ?, rating = ?, archived = ?, updated_at = datetime('now') WHERE id = ?"
   ).bind(title, network, network_url, recommended_by, list, notes, movie, rating, archived, params.id).run();
 
-  // Refresh actors if OMDB returned any
   if (omdb.actors.length > 0) {
     await env.DB.prepare('DELETE FROM actors WHERE show_id = ?').bind(params.id).run();
     const stmt = env.DB.prepare('INSERT INTO actors (show_id, name) VALUES (?, ?)');
@@ -133,12 +128,11 @@ export async function onRequestPut(context) {
 
 export async function onRequestDelete(context) {
   const { request, env, params } = context;
-  const user = await verifyAuth(request, env);
-  if (!user) {
+  const session = await getSession(request, env);
+  if (!session) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders() });
   }
-
-  await env.DB.prepare('DELETE FROM shows WHERE id = ?').bind(params.id).run();
+  await env.DB.prepare('DELETE FROM shows WHERE id = ? AND household_slug = ?').bind(params.id, session.household_slug).run();
   return new Response(JSON.stringify({ success: true }), { headers: corsHeaders() });
 }
 
@@ -146,8 +140,8 @@ export async function onRequestOptions() {
   return new Response(null, {
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Cf-Access-Jwt-Assertion',
+      'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
 }
