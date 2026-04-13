@@ -70,14 +70,15 @@ export async function onRequestPut(context) {
   const list = body.list ?? existing.list;
   const notes = body.notes ?? existing.notes;
   const movie = body.movie ?? existing.movie;
+  const archived = body.archived ?? existing.archived;
 
   // Refresh rating and actors from OMDB
   const omdb = await fetchOMDB(title, env);
   const rating = omdb.rating || existing.rating;
 
   await env.DB.prepare(
-    'UPDATE shows SET title = ?, network = ?, network_url = ?, recommended_by = ?, list = ?, notes = ?, movie = ?, rating = ?, updated_at = datetime(\'now\') WHERE id = ?'
-  ).bind(title, network, network_url, recommended_by, list, notes, movie, rating, params.id).run();
+    'UPDATE shows SET title = ?, network = ?, network_url = ?, recommended_by = ?, list = ?, notes = ?, movie = ?, rating = ?, archived = ?, updated_at = datetime(\'now\') WHERE id = ?'
+  ).bind(title, network, network_url, recommended_by, list, notes, movie, rating, archived, params.id).run();
 
   // Refresh actors if OMDB returned any
   if (omdb.actors.length > 0) {

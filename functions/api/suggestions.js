@@ -30,6 +30,18 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ error: 'Title is required' }), { status: 400, headers: corsHeaders() });
   }
 
+  // Check for existing show (including archived)
+  const existing = await env.DB.prepare(
+    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?)'
+  ).bind(title).first();
+
+  if (existing) {
+    if (existing.archived) {
+      return new Response(JSON.stringify({ duplicate: true, archived: true }), { headers: corsHeaders() });
+    }
+    return new Response(JSON.stringify({ duplicate: true, archived: false, list: existing.list }), { headers: corsHeaders() });
+  }
+
   const omdb = await fetchOMDB(title, env);
   const suggestionNote = notes
     ? `Suggested · ${notes}`

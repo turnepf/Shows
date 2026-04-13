@@ -449,15 +449,29 @@
     // =====================================================
 
     const NETWORK_SEARCH = {
-      'Netflix': 'https://www.netflix.com/search?q=',
-      'HBO': 'https://play.max.com/search?q=',
-      'Apple TV': 'https://tv.apple.com/search?term=',
-      'Hulu': 'https://www.hulu.com/search/',
-      'Paramount': 'https://www.paramountplus.com/search/',
-      'Bravo': 'https://www.peacocktv.com/watch/search/',
-      'Peacock': 'https://www.peacocktv.com/watch/search/',
-      'Amazon': 'https://www.amazon.com/s?i=instant-video&k=',
+      'Netflix': { base: 'https://www.netflix.com/search', param: null },
+      'HBO': { base: 'https://play.max.com/search', param: 'q' },
+      'Apple TV': { base: 'https://tv.apple.com/search', param: 'term' },
+      'Hulu': { base: 'https://www.hulu.com/search', param: null },
+      'Paramount': { base: 'https://www.paramountplus.com/search', param: null },
+      'Bravo': { base: 'https://www.peacocktv.com/watch/search', param: null },
+      'Peacock': { base: 'https://www.peacocktv.com/watch/search', param: null },
+      'Amazon': { base: 'https://www.amazon.com/s', param: 'k', extra: 'i=instant-video' },
+      'Disney+': { base: 'https://www.disneyplus.com/search', param: null },
+      'NBC': { base: 'https://www.nbc.com/search', param: null },
+      'Starz': { base: 'https://www.starz.com/search', param: 'q' },
+      'Showtime': { base: 'https://www.sho.com/search', param: 'q' },
     };
+
+    function buildSearchUrl(network, title) {
+      const cfg = NETWORK_SEARCH[network];
+      if (!cfg) return null;
+      if (!cfg.param) return cfg.base;
+      const params = new URLSearchParams();
+      if (cfg.extra) cfg.extra.split('&').forEach(p => { const [k,v] = p.split('='); params.set(k,v); });
+      params.set(cfg.param, title);
+      return cfg.base + '?' + params.toString();
+    }
 
     let shows = [];
     let currentTab = 'watching';
@@ -566,7 +580,7 @@
                 <option value="next" ${show.list === 'next' ? 'disabled' : ''}>Up Next</option>
               </select>
               <button class="btn btn-small btn-edit" onclick="openEditModal(${show.id})">Edit</button>
-              <button class="btn btn-small btn-archive" onclick="archiveShow(${show.id})">Arc</button>
+              <button class="btn btn-small btn-archive" onclick="archiveShow(${show.id})">Archive</button>
             </div>`;
         }
 
@@ -629,10 +643,8 @@
       const network = document.getElementById('inputNetwork').value;
       if (!title) { alert('Enter a show title first'); return; }
       if (!network) { alert('Select a network first'); return; }
-      const base = NETWORK_SEARCH[network];
-      if (base) {
-        window.open(base + encodeURIComponent(title), '_blank');
-      }
+      const url = buildSearchUrl(network, title);
+      if (url) window.open(url, '_blank');
     }
 
     function openAddModal() {
@@ -702,11 +714,29 @@
             body: JSON.stringify(body),
           });
         } else {
-          res = await fetch('/api/shows', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
+          // Check for existing (including archived) before adding
+          const checkRes = await fetch('/api/shows/check?title=' + encodeURIComponent(title));
+          const check = await checkRes.json();
+          if (check.exists) {
+            if (check.archived) {
+              const restore = confirm(`"${title}" is already in the database but not on any list. Add it to ${body.list}?`);
+              if (!restore) return;
+              res = await fetch(`/api/shows/${check.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...body, archived: 0 }),
+              });
+            } else {
+              alert(`"${title}" is already on the ${check.list} list.`);
+              return;
+            }
+          } else {
+            res = await fetch('/api/shows', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+          }
         }
         if (!res.ok) {
           const err = await res.json();
@@ -781,6 +811,12 @@
       document.getElementById('suggestOverlay').classList.add('hidden');
     }
 
+    const ARCHIVED_QUIPS = [
+      `${OWNERS} have seen this one, but it didn't make the cut!`,
+      `Been there, watched that! ${OWNERS} moved on from this one.`,
+      `${OWNERS} gave it a shot but it's not on their list anymore.`,
+    ];
+
     const QUIPS = {
       watching: [
         `Great minds think alike! ${OWNERS} are watching this right now!`,
@@ -817,25 +853,26 @@
       if (!title) { alert('Show title is required'); return; }
       if (!name) { alert('Your name is required'); return; }
 
-      // Check if already in the database
-      const match = shows.find(s => s.title.toLowerCase() === title.toLowerCase());
-      if (match) {
-        alert(getQuip(match.list));
-        return;
-      }
-
       try {
         const res = await fetch('/api/suggestions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title, network, recommended_by: name, notes, movie: document.getElementById('suggestMovie').checked ? 1 : 0 }),
         });
-        if (res.ok) {
+        const data = await res.json();
+        if (data.duplicate) {
+          closeSuggestModal();
+          if (data.archived) {
+            alert(ARCHIVED_QUIPS[Math.floor(Math.random() * ARCHIVED_QUIPS.length)]);
+          } else {
+            alert(getQuip(data.list));
+          }
+        } else if (data.success) {
           closeSuggestModal();
           alert(`Thanks! Your suggestion has been sent to ${OWNERS}!`);
           await loadShows();
         } else {
-          alert('Failed to send suggestion');
+          alert(data.error || 'Failed to send suggestion');
         }
       } catch (e) {
         alert('Failed to send suggestion');
@@ -855,6 +892,7 @@
     }
     checkAuth();
     loadShows();
+    fetch('/api/enrich').catch(() => {});
 
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') closeModal();

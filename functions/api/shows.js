@@ -1,19 +1,27 @@
-const NETWORK_URLS = {
-  'Netflix': 'https://www.netflix.com/search?q=',
-  'HBO': 'https://www.max.com/search?q=',
-  'Apple TV': 'https://tv.apple.com/search?term=',
-  'Hulu': 'https://www.hulu.com/search?q=',
-  'Paramount': 'https://www.paramountplus.com/search/',
-  'Peacock': 'https://www.peacocktv.com/search?q=',
-  'Amazon': 'https://www.amazon.com/s?i=instant-video&k=',
-  'Bravo': 'https://www.peacocktv.com/search?q=',
+const NETWORK_SEARCH = {
+  'Netflix': { base: 'https://www.netflix.com/search' },
+  'HBO': { base: 'https://play.max.com/search', param: 'q' },
+  'Apple TV': { base: 'https://tv.apple.com/search', param: 'term' },
+  'Hulu': { base: 'https://www.hulu.com/search' },
+  'Paramount': { base: 'https://www.paramountplus.com/search' },
+  'Peacock': { base: 'https://www.peacocktv.com/watch/search' },
+  'Amazon': { base: 'https://www.amazon.com/s', param: 'k', extra: 'i=instant-video' },
+  'Bravo': { base: 'https://www.peacocktv.com/watch/search' },
+  'Disney+': { base: 'https://www.disneyplus.com/search' },
+  'NBC': { base: 'https://www.nbc.com/search' },
+  'Starz': { base: 'https://www.starz.com/search', param: 'q' },
+  'Showtime': { base: 'https://www.sho.com/search', param: 'q' },
 };
 
 function generateNetworkUrl(network, title) {
   if (!network) return null;
-  const base = NETWORK_URLS[network];
-  if (!base) return null;
-  return base + encodeURIComponent(title);
+  const cfg = NETWORK_SEARCH[network];
+  if (!cfg) return null;
+  if (!cfg.param) return cfg.base;
+  const params = new URLSearchParams();
+  if (cfg.extra) cfg.extra.split('&').forEach(p => { const [k,v] = p.split('='); params.set(k,v); });
+  params.set(cfg.param, title);
+  return cfg.base + '?' + params.toString();
 }
 
 function cleanUrl(url) {
