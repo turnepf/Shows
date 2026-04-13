@@ -115,11 +115,16 @@
     .show-row {
       display: flex;
       align-items: baseline;
-      flex-wrap: wrap;
       padding: 7px 0;
       border-bottom: 1px solid #ebe5da;
       font-size: 14px;
-      gap: 4px 8px;
+      gap: 8px;
+    }
+
+    .show-info {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.4;
     }
 
     .show-row:last-child { border-bottom: none; }
@@ -186,7 +191,7 @@
       white-space: nowrap;
     }
 
-    .show-spacer { flex: 1; }
+
 
     .show-actions-inline {
       display: flex;
@@ -586,8 +591,7 @@
 
         return `
           <div class="show-row">
-            <span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${from}${network}${notes}
-            <span class="show-spacer"></span>
+            <span class="show-info"><span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${from}${network}${notes}</span>
             ${actions}
           </div>
           <div class="show-actors" id="actors-${show.id}">
