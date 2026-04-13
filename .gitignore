@@ -1,3 +1,5 @@
 seed.sql
+.env
+deployments.local.md
 .wrangler/
 node_modules/
