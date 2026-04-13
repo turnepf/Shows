@@ -5,20 +5,59 @@ function corsHeaders() {
   };
 }
 
-async function fetchOMDB(title, env) {
-  const apiKey = env.OMDB_API_KEY;
-  if (!apiKey) return { rating: null, actors: [] };
+async function tryOMDB(title, apiKey) {
   try {
     const res = await fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${apiKey}`);
     const data = await res.json();
     if (data.Response === 'True') {
       return {
+        canonicalTitle: data.Title,
         rating: data.imdbRating !== 'N/A' ? data.imdbRating : null,
         actors: data.Actors && data.Actors !== 'N/A' ? data.Actors.split(', ') : [],
       };
     }
   } catch (e) {}
-  return { rating: null, actors: [] };
+  return null;
+}
+
+async function searchOMDB(title, apiKey) {
+  try {
+    const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(title)}&apikey=${apiKey}`);
+    const data = await res.json();
+    if (data.Response === 'True' && data.Search && data.Search.length > 0) {
+      const detailRes = await fetch(`https://www.omdbapi.com/?i=${data.Search[0].imdbID}&apikey=${apiKey}`);
+      const detail = await detailRes.json();
+      if (detail.Response === 'True') {
+        return {
+          canonicalTitle: detail.Title,
+          rating: detail.imdbRating !== 'N/A' ? detail.imdbRating : null,
+          actors: detail.Actors && detail.Actors !== 'N/A' ? detail.Actors.split(', ') : [],
+        };
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+async function fetchOMDB(title, env) {
+  const apiKey = env.OMDB_API_KEY;
+  if (!apiKey) return { canonicalTitle: null, rating: null, actors: [] };
+  let result = await tryOMDB(title, apiKey);
+  if (result) return result;
+  result = await tryOMDB('The ' + title, apiKey);
+  if (result) return result;
+  if (title.toLowerCase().startsWith('the ')) {
+    result = await tryOMDB(title.slice(4), apiKey);
+    if (result) return result;
+  }
+  const collapsed = title.replace(/\s+/g, '');
+  if (collapsed !== title) {
+    result = await tryOMDB(collapsed, apiKey);
+    if (result) return result;
+  }
+  result = await searchOMDB(title, apiKey);
+  if (result) return result;
+  return { canonicalTitle: null, rating: null, actors: [] };
 }
 
 export async function onRequestPost(context) {
@@ -43,13 +82,14 @@ export async function onRequestPost(context) {
   }
 
   const omdb = await fetchOMDB(title, env);
+  const finalTitle = omdb.canonicalTitle || title;
   const suggestionNote = notes
     ? `Suggested · ${notes}`
     : 'Suggested';
 
   const result = await env.DB.prepare(
     'INSERT INTO shows (title, network, recommended_by, rating, list, notes, movie) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).bind(title, network || null, recommended_by || null, omdb.rating, 'next', suggestionNote, movie || 0).run();
+  ).bind(finalTitle, network || null, recommended_by || null, omdb.rating, 'next', suggestionNote, movie || 0).run();
 
   const showId = result.meta.last_row_id;
   if (omdb.actors.length > 0) {

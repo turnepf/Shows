@@ -24,18 +24,69 @@ function generateSearchUrl(network, title) {
   return cfg.base + '?' + params.toString();
 }
 
-async function fetchOMDB(title, apiKey) {
+async function tryOMDB(title, apiKey) {
   try {
     const res = await fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${apiKey}`);
     const data = await res.json();
     if (data.Response === 'True') {
       return {
+        canonicalTitle: data.Title,
         rating: data.imdbRating !== 'N/A' ? data.imdbRating : null,
         actors: data.Actors && data.Actors !== 'N/A' ? data.Actors.split(', ') : [],
       };
     }
   } catch (e) {}
-  return { rating: null, actors: [] };
+  return null;
+}
+
+async function searchOMDB(title, apiKey) {
+  try {
+    const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(title)}&apikey=${apiKey}`);
+    const data = await res.json();
+    if (data.Response === 'True' && data.Search && data.Search.length > 0) {
+      // Fetch full details for the first result
+      const id = data.Search[0].imdbID;
+      const detailRes = await fetch(`https://www.omdbapi.com/?i=${id}&apikey=${apiKey}`);
+      const detail = await detailRes.json();
+      if (detail.Response === 'True') {
+        return {
+          canonicalTitle: detail.Title,
+          rating: detail.imdbRating !== 'N/A' ? detail.imdbRating : null,
+          actors: detail.Actors && detail.Actors !== 'N/A' ? detail.Actors.split(', ') : [],
+        };
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+async function fetchOMDB(title, apiKey) {
+  // Try exact title
+  let result = await tryOMDB(title, apiKey);
+  if (result) return result;
+
+  // Try with "The " prepended
+  result = await tryOMDB('The ' + title, apiKey);
+  if (result) return result;
+
+  // Try without "The " prefix
+  if (title.toLowerCase().startsWith('the ')) {
+    result = await tryOMDB(title.slice(4), apiKey);
+    if (result) return result;
+  }
+
+  // Try collapsing spaces (e.g. "Land Man" -> "Landman")
+  const collapsed = title.replace(/\s+/g, '');
+  if (collapsed !== title) {
+    result = await tryOMDB(collapsed, apiKey);
+    if (result) return result;
+  }
+
+  // Fall back to search endpoint
+  result = await searchOMDB(title, apiKey);
+  if (result) return result;
+
+  return { canonicalTitle: null, rating: null, actors: [] };
 }
 
 export async function onRequestGet(context) {
@@ -62,6 +113,13 @@ export async function onRequestGet(context) {
 
   for (const show of needsRating) {
     const omdb = await fetchOMDB(show.title, apiKey);
+
+    // Update canonical title if OMDB returned a different one
+    if (omdb.canonicalTitle && omdb.canonicalTitle !== show.title) {
+      await env.DB.prepare(
+        "UPDATE shows SET title = ?, updated_at = datetime('now') WHERE id = ?"
+      ).bind(omdb.canonicalTitle, show.id).run();
+    }
 
     // Update rating if missing
     if (omdb.rating) {
