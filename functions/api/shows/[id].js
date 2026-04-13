@@ -102,14 +102,15 @@ export async function onRequestPut(context) {
   }
 
   const body = await request.json();
-  const title = body.title ?? existing.title;
-  const network = body.network ?? existing.network;
+  const val = (key) => body[key] !== undefined ? body[key] : existing[key];
+  const title = val('title');
+  const network = val('network');
   const network_url = body.network_url !== undefined ? cleanUrl(body.network_url) : existing.network_url;
-  const recommended_by = body.recommended_by ?? existing.recommended_by;
-  const list = body.list ?? existing.list;
-  const notes = body.notes ?? existing.notes;
-  const movie = body.movie ?? existing.movie;
-  const archived = body.archived ?? existing.archived;
+  const recommended_by = val('recommended_by');
+  const list = val('list');
+  const notes = val('notes');
+  const movie = val('movie');
+  const archived = val('archived');
 
   // Refresh rating and actors from OMDB
   const omdb = await fetchOMDB(title, env);
