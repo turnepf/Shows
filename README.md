@@ -21,7 +21,6 @@ The easiest way to set up your own instance is with [Claude Code](https://claude
 
 ```
 Clone https://github.com/turnepf/Shows and set it up on my Cloudflare account. Walk me through each step:
-
 1. Clone the repo
 2. Create a Cloudflare D1 database called "shows-db" and update wrangler.toml with the database ID
 3. Run schema.sql against the database
@@ -78,10 +77,13 @@ Claude will walk you through it interactively.
    ```
 
 7. **Set secrets:**
+
+   > ⚠️ Use `printf` instead of `echo` — `echo` appends a trailing newline that causes login codes to silently fail at runtime.
+
    ```bash
-   echo "your-omdb-key" | wrangler pages secret put OMDB_API_KEY --project-name shows
-   echo "1234" | wrangler pages secret put LOGIN_CODE_1 --project-name shows
-   echo "5678" | wrangler pages secret put LOGIN_CODE_2 --project-name shows
+   printf "your-omdb-key" | wrangler pages secret put OMDB_API_KEY --project-name shows
+   printf "1234" | wrangler pages secret put LOGIN_CODE_1 --project-name shows
+   printf "5678" | wrangler pages secret put LOGIN_CODE_2 --project-name shows
    ```
 
 8. **(Optional) Add a custom domain** — In the Cloudflare dashboard, go to Pages > your project > Custom domains.
