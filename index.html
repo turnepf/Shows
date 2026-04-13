@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Ali & Patrick's Shows</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#2C3E50">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -912,6 +916,7 @@
     checkAuth();
     loadShows();
     fetch('/api/enrich').catch(() => {});
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') closeModal();
