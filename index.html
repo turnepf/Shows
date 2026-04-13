@@ -740,8 +740,23 @@
         }
         if (!res.ok) {
           const err = await res.json();
-          alert(err.error || 'Failed to save');
-          return;
+          if (err.error === 'exists_archived') {
+            const restore = confirm(`IMDB knows this as "${err.title}" and it's already in the database but not on any list. Add it to ${body.list}?`);
+            if (restore) {
+              res = await fetch(`/api/shows/${err.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...body, title: err.title, archived: 0 }),
+              });
+              if (!res.ok) { alert('Failed to restore'); return; }
+            } else { return; }
+          } else if (err.error === 'exists_active') {
+            alert(`IMDB knows this as "${err.title}" and it's already on the ${err.list} list.`);
+            return;
+          } else {
+            alert(err.error || 'Failed to save');
+            return;
+          }
         }
         const saved = await res.json();
         closeModal();

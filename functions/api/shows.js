@@ -131,6 +131,18 @@ export async function onRequestPost(context) {
 
   const omdb = await fetchOMDB(title, env);
   const finalTitle = omdb.canonicalTitle || title;
+
+  // Check if canonical title already exists
+  const existing = await env.DB.prepare(
+    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?)'
+  ).bind(finalTitle).first();
+  if (existing) {
+    if (existing.archived) {
+      return new Response(JSON.stringify({ error: 'exists_archived', id: existing.id, title: finalTitle }), { status: 409, headers: corsHeaders() });
+    }
+    return new Response(JSON.stringify({ error: 'exists_active', list: existing.list, title: finalTitle }), { status: 409, headers: corsHeaders() });
+  }
+
   const url = cleanUrl(network_url) || generateNetworkUrl(network, finalTitle);
 
   const result = await env.DB.prepare(

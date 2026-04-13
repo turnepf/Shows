@@ -83,6 +83,20 @@ export async function onRequestPost(context) {
 
   const omdb = await fetchOMDB(title, env);
   const finalTitle = omdb.canonicalTitle || title;
+
+  // Check again with canonical title (e.g. "Land Man" -> "Landman" might already exist)
+  if (finalTitle.toLowerCase() !== title.toLowerCase()) {
+    const dupeCheck = await env.DB.prepare(
+      'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?)'
+    ).bind(finalTitle).first();
+    if (dupeCheck) {
+      if (dupeCheck.archived) {
+        return new Response(JSON.stringify({ duplicate: true, archived: true }), { headers: corsHeaders() });
+      }
+      return new Response(JSON.stringify({ duplicate: true, archived: false, list: dupeCheck.list }), { headers: corsHeaders() });
+    }
+  }
+
   const suggestionNote = notes
     ? `Suggested · ${notes}`
     : 'Suggested';

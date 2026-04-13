@@ -116,6 +116,18 @@ export async function onRequestGet(context) {
 
     // Update canonical title if OMDB returned a different one
     if (omdb.canonicalTitle && omdb.canonicalTitle !== show.title) {
+      // Check if canonical title already exists in DB
+      const dupe = await env.DB.prepare(
+        'SELECT id FROM shows WHERE LOWER(title) = LOWER(?) AND id != ?'
+      ).bind(omdb.canonicalTitle, show.id).first();
+      if (dupe) {
+        // Duplicate — archive this one instead of renaming
+        await env.DB.prepare(
+          "UPDATE shows SET archived = 1, updated_at = datetime('now') WHERE id = ?"
+        ).bind(show.id).run();
+        enriched++;
+        continue;
+      }
       await env.DB.prepare(
         "UPDATE shows SET title = ?, updated_at = datetime('now') WHERE id = ?"
       ).bind(omdb.canonicalTitle, show.id).run();
