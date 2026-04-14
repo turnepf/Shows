@@ -132,7 +132,8 @@
 
     .show-network-plain { color: #7f8c8d; font-size: 13px; white-space: nowrap; }
 
-    .show-series { color: #27ae60; font-size: 12px; font-weight: 500; white-space: nowrap; }
+
+    .show-next-date { color: #E67E22; font-size: 12px; font-weight: 500; white-space: nowrap; }
 
     .show-from { color: #95a5a6; font-size: 13px; white-space: nowrap; }
     .show-on { color: #95a5a6; font-size: 13px; }
@@ -574,7 +575,7 @@
           ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>`
           : '';
         const series = show.full_series
-          ? ` <span class="show-series">Series Complete</span>`
+          ? ' 🎁'
           : '';
         const from = show.recommended_by
           ? ` <span class="show-from">from ${escapeHtml(show.recommended_by)}</span>`
@@ -585,6 +586,14 @@
             ? ` <span class="show-on">on</span> <a class="show-network" href="${show.network_url}" target="_blank" rel="noopener">${escapeHtml(show.network)}</a>`
             : ` <span class="show-on">on</span> <span class="show-network-plain">${escapeHtml(show.network)}</span>`
           : '';
+        let nextDate = '';
+        if (show.next_season_date) {
+          const start = formatDate(show.next_season_date);
+          const end = show.season_end_date ? formatDate(show.season_end_date) : null;
+          nextDate = end && end !== start
+            ? ` <span class="show-next-date">(${start} – ${end})</span>`
+            : ` <span class="show-next-date">(${start})</span>`;
+        }
         const notes = show.notes
           ? ` <span class="show-notes-inline">(${escapeHtml(show.notes)})</span>`
           : '';
@@ -607,7 +616,7 @@
 
         return `
           <div class="show-row">
-            <span class="show-info"><span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${series}${network}${from}${notes}</span>
+            <span class="show-info"><span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${series}${network}${nextDate}${from}${notes}</span>
             ${actions}
           </div>
           <div class="show-actors" id="actors-${show.id}">
@@ -615,7 +624,8 @@
           </div>`;
       }).join('');
 
-      // Network counts
+      // Footer: legend + network counts
+      const hasFullSeries = filtered.some(s => s.full_series);
       const networkCounts = {};
       filtered.forEach(s => {
         if (!s.network) return;
@@ -625,7 +635,9 @@
         .sort((a, b) => b[1] - a[1])
         .map(([n, c]) => `${n} (${c})`)
         .join(' &middot; ');
-      if (countsHtml) container.innerHTML += `<div class="network-counts">${countsHtml}</div>`;
+      const legend = hasFullSeries ? '🎁 = Series Complete' : '';
+      const footer = [legend, countsHtml].filter(Boolean).join(' &middot; ');
+      if (footer) container.innerHTML += `<div class="network-counts">${footer}</div>`;
     }
 
     async function toggleActors(showId) {
@@ -905,6 +917,12 @@
       } catch (e) {
         alert('Failed to send suggestion');
       }
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const [y, m, d] = dateStr.split('-');
+      return `${parseInt(m)}/${parseInt(d)}`;
     }
 
     function escapeHtml(str) {

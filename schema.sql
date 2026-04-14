@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS shows (
   notes TEXT,
   movie INTEGER DEFAULT 0,
   full_series INTEGER DEFAULT 0,
+  next_season_date TEXT,
+  season_end_date TEXT,
   archived INTEGER DEFAULT 0,
   household_slug TEXT REFERENCES households(slug),
   created_at TEXT DEFAULT (datetime('now')),

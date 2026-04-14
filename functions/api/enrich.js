@@ -167,7 +167,54 @@ export async function onRequestGet(context) {
     enriched++;
   }
 
-  return new Response(JSON.stringify({ enriched }), {
+  // TMDB: check next season dates for Watching and Waiting shows
+  const tmdbKey = env.TMDB_API_KEY;
+  let tmdbUpdated = 0;
+  if (tmdbKey) {
+    let tmdbQuery = `SELECT id, title, movie FROM shows
+       WHERE archived = 0 AND movie = 0
+       AND list IN ('watching', 'waiting')`;
+    if (household) tmdbQuery += ` AND household_slug = '${household}'`;
+
+    const { results: tmdbShows } = await env.DB.prepare(tmdbQuery).all();
+
+    for (const show of tmdbShows) {
+      try {
+        // Search TMDB for the show
+        const searchRes = await fetch(`https://api.themoviedb.org/3/search/tv?query=${encodeURIComponent(show.title)}&api_key=${tmdbKey}`);
+        const searchData = await searchRes.json();
+        if (!searchData.results || searchData.results.length === 0) continue;
+
+        const tmdbId = searchData.results[0].id;
+        const detailRes = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${tmdbKey}`);
+        const detail = await detailRes.json();
+
+        const nextEp = detail.next_episode_to_air;
+        const newDate = nextEp ? nextEp.air_date : null;
+
+        // Get season finale date
+        let endDate = null;
+        if (nextEp) {
+          try {
+            const seasonRes = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/season/${nextEp.season_number}?api_key=${tmdbKey}`);
+            const seasonData = await seasonRes.json();
+            const eps = seasonData.episodes || [];
+            if (eps.length > 0) {
+              const lastEp = eps[eps.length - 1];
+              if (lastEp.air_date) endDate = lastEp.air_date;
+            }
+          } catch (e) {}
+        }
+
+        await env.DB.prepare(
+          "UPDATE shows SET next_season_date = ?, season_end_date = ?, updated_at = datetime('now') WHERE id = ?"
+        ).bind(newDate, endDate, show.id).run();
+        tmdbUpdated++;
+      } catch (e) {}
+    }
+  }
+
+  return new Response(JSON.stringify({ enriched, tmdbUpdated }), {
     headers: { 'Content-Type': 'application/json' },
   });
 }
