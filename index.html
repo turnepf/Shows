@@ -150,18 +150,28 @@
     .network-counts { text-align: center; font-size: 12px; color: #95a5a6; padding: 12px 0 4px; }
 
     .toggle-bar {
-      text-align: center;
-      font-size: 12px;
-      padding: 6px 0 8px;
-      color: #bdc3c7;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 0 10px;
     }
-    .toggle-link {
-      color: #95a5a6;
+    .toggle-pill {
+      padding: 4px 10px;
+      font-size: 11px;
+      font-family: inherit;
+      border-radius: 12px;
       cursor: pointer;
-      text-decoration: underline;
-      text-decoration-style: dotted;
+      transition: all 0.15s;
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #aaa;
     }
-    .toggle-link:hover { color: #7f8c8d; }
+    .toggle-pill.active {
+      background: #2C3E50;
+      color: #fff;
+      border-color: #2C3E50;
+    }
 
     .fab-suggest {
       position: fixed;
@@ -669,8 +679,8 @@
 
       const togglesHtml = TOGGLES.map(key => {
         const vis = getVisible(key);
-        return `<span class="toggle-link" onclick="toggleVisible('${key}')">${vis ? 'Hide' : 'Show'} ${TOGGLE_LABELS[key]}</span>`;
-      }).join(' &middot; ');
+        return `<button class="toggle-pill${vis ? ' active' : ''}" onclick="toggleVisible('${key}')">${TOGGLE_LABELS[key]}</button>`;
+      }).join('');
       container.innerHTML += `<div class="toggle-bar">${togglesHtml}</div>`;
     }
 
