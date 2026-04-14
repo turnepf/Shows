@@ -174,23 +174,6 @@
       border-color: #2C3E50;
     }
 
-    .fab-suggest {
-      position: fixed;
-      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-      right: 20px;
-      background: #2C3E50;
-      color: #fff;
-      border: none;
-      border-radius: 24px;
-      padding: 12px 20px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 50;
-      font-family: inherit;
-    }
-    .fab-suggest:hover { background: #1a252f; }
 
     .hidden { display: none !important; }
 
@@ -326,7 +309,6 @@
       <div class="empty hidden" id="empty">No shows in this list yet.</div>
     </main>
 
-    <button class="fab-suggest" id="suggestBtn" onclick="openSuggestModal()">Suggest a Show</button>
   </div>
 
   <!-- Add/Edit Modal -->
@@ -544,9 +526,9 @@
         if (data.authenticated && data.household === householdSlug) {
           isEditor = true;
           document.getElementById('addBtn').classList.remove('hidden');
-          document.getElementById('suggestBtn').classList.add('hidden');
           document.getElementById('loginBtn').textContent = 'Logout';
           document.getElementById('loginBtn').onclick = logout;
+          renderShows();
         }
       } catch (e) {}
     }
@@ -678,11 +660,12 @@
       const footer = [legend, countsHtml].filter(Boolean).join(' &middot; ');
       if (footer) container.innerHTML += `<div class="network-counts">${footer}</div>`;
 
+      const suggestPill = !isEditor ? `<button class="toggle-pill active" onclick="openSuggestModal()" id="suggestBtn">Suggest a Show</button>` : '';
       const togglesHtml = TOGGLES.map(key => {
         const vis = getVisible(key);
         return `<button class="toggle-pill${vis ? ' active' : ''}" onclick="toggleVisible('${key}')">${TOGGLE_LABELS[key]}</button>`;
       }).join('');
-      container.innerHTML += `<div class="toggle-bar">${togglesHtml}</div>`;
+      container.innerHTML += `<div class="toggle-bar">${suggestPill}${togglesHtml}</div>`;
     }
 
     async function toggleActors(showId) {
