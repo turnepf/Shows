@@ -596,7 +596,7 @@
           ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>`
           : '';
         const series = show.full_series
-          ? ' 🎁'
+          ? ' 🎬'
           : '';
         const from = showFrom && show.recommended_by
           ? ` <span class="show-from">from ${escapeHtml(show.recommended_by)}</span>`
@@ -656,7 +656,7 @@
         .sort((a, b) => b[1] - a[1])
         .map(([n, c]) => `${n} (${c})`)
         .join(' &middot; ');
-      const legend = hasFullSeries ? '🎁 = Series Complete' : '';
+      const legend = hasFullSeries ? '🎬 = Series Complete' : '';
       const footer = [legend, countsHtml].filter(Boolean).join(' &middot; ');
       if (footer) container.innerHTML += `<div class="network-counts">${footer}</div>`;
 
