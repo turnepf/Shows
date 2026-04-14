@@ -149,6 +149,20 @@
 
     .network-counts { text-align: center; font-size: 12px; color: #95a5a6; padding: 12px 0 4px; }
 
+    .toggle-bar {
+      text-align: center;
+      font-size: 12px;
+      padding: 6px 0 8px;
+      color: #bdc3c7;
+    }
+    .toggle-link {
+      color: #95a5a6;
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+    }
+    .toggle-link:hover { color: #7f8c8d; }
+
     .fab-suggest {
       position: fixed;
       bottom: calc(20px + env(safe-area-inset-bottom, 0px));
@@ -432,6 +446,14 @@
     let householdName = '';
     let owners = '';
 
+    const TOGGLES = ['rating', 'network', 'from', 'dates', 'notes'];
+    const TOGGLE_LABELS = { rating: 'Ratings', network: 'Networks', from: 'Recommended By', dates: 'Dates', notes: 'Notes' };
+    function getVisible(key) { return localStorage.getItem(`hide_${key}`) !== '1'; }
+    function toggleVisible(key) {
+      localStorage.setItem(`hide_${key}`, getVisible(key) ? '1' : '0');
+      renderShows();
+    }
+
     const SECTION_DESCS = {
       watching: "What we're watching now.",
       waiting: "Waiting on the next season to drop.",
@@ -570,31 +592,37 @@
       }
       empty.classList.add('hidden');
 
+      const showRating = getVisible('rating');
+      const showNetwork = getVisible('network');
+      const showFrom = getVisible('from');
+      const showDates = getVisible('dates');
+      const showNotes = getVisible('notes');
+
       container.innerHTML = filtered.map(show => {
-        const rating = show.rating
+        const rating = showRating && show.rating
           ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>`
           : '';
         const series = show.full_series
           ? ' 🎁'
           : '';
-        const from = show.recommended_by
+        const from = showFrom && show.recommended_by
           ? ` <span class="show-from">from ${escapeHtml(show.recommended_by)}</span>`
           : '';
         const hasRealUrl = show.network_url && !show.network_url.includes('/search') && !show.network_url.includes('/s?') && show.network_url !== '#';
-        const network = show.network
+        const network = showNetwork && show.network
           ? hasRealUrl
             ? ` <span class="show-on">on</span> <a class="show-network" href="${show.network_url}" target="_blank" rel="noopener">${escapeHtml(show.network)}</a>`
             : ` <span class="show-on">on</span> <span class="show-network-plain">${escapeHtml(show.network)}</span>`
           : '';
         let nextDate = '';
-        if (show.next_season_date) {
+        if (showDates && show.next_season_date) {
           const start = formatDate(show.next_season_date);
           const end = show.season_end_date ? formatDate(show.season_end_date) : null;
           nextDate = end && end !== start
             ? ` <span class="show-next-date">(${start} – ${end})</span>`
             : ` <span class="show-next-date">(${start})</span>`;
         }
-        const notes = show.notes
+        const notes = showNotes && show.notes
           ? ` <span class="show-notes-inline">(${escapeHtml(show.notes)})</span>`
           : '';
 
@@ -638,6 +666,12 @@
       const legend = hasFullSeries ? '🎁 = Series Complete' : '';
       const footer = [legend, countsHtml].filter(Boolean).join(' &middot; ');
       if (footer) container.innerHTML += `<div class="network-counts">${footer}</div>`;
+
+      const togglesHtml = TOGGLES.map(key => {
+        const vis = getVisible(key);
+        return `<span class="toggle-link" onclick="toggleVisible('${key}')">${vis ? 'Hide' : 'Show'} ${TOGGLE_LABELS[key]}</span>`;
+      }).join(' &middot; ');
+      container.innerHTML += `<div class="toggle-bar">${togglesHtml}</div>`;
     }
 
     async function toggleActors(showId) {
