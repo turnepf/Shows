@@ -1,5 +1,6 @@
 seed.sql
 .env
 deployments.local.md
+backups/
 .wrangler/
 node_modules/

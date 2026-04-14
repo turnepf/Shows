@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS shows (
   list TEXT NOT NULL,
   notes TEXT,
   movie INTEGER DEFAULT 0,
+  full_series INTEGER DEFAULT 0,
   archived INTEGER DEFAULT 0,
   household_slug TEXT REFERENCES households(slug),
   created_at TEXT DEFAULT (datetime('now')),

@@ -132,6 +132,8 @@
 
     .show-network-plain { color: #7f8c8d; font-size: 13px; white-space: nowrap; }
 
+    .show-series { color: #27ae60; font-size: 12px; font-weight: 500; white-space: nowrap; }
+
     .show-from { color: #95a5a6; font-size: 13px; white-space: nowrap; }
     .show-on { color: #95a5a6; font-size: 13px; }
     .show-notes-inline { color: #aaa; font-size: 12px; font-style: italic; white-space: nowrap; }
@@ -338,6 +340,7 @@
       <input type="text" id="inputNotes" placeholder="e.g. Movie, Harlan Coben">
 
       <label class="checkbox-label"><input type="checkbox" id="inputMovie"> Movie</label>
+      <label class="checkbox-label"><input type="checkbox" id="inputFullSeries"> Series Complete</label>
 
       <label for="inputList">List</label>
       <select id="inputList">
@@ -385,6 +388,7 @@
       <input type="text" id="suggestNotes" placeholder="e.g. Great thriller, has Mark Ruffalo">
 
       <label class="checkbox-label"><input type="checkbox" id="suggestMovie"> Movie</label>
+      <label class="checkbox-label"><input type="checkbox" id="suggestFullSeries"> Series Complete</label>
 
       <div class="modal-actions">
         <button class="btn btn-cancel" onclick="closeSuggestModal()">Cancel</button>
@@ -452,7 +456,7 @@
         const data = await res.json();
         const list = document.getElementById('householdList');
         list.innerHTML = data.households.map(h =>
-          `<a class="household-card" href="/${h.slug}">${escapeHtml(h.name)}</a>`
+          `<a class="household-card" href="/${h.slug}" target="_blank">${escapeHtml(h.name)}</a>`
         ).join('');
       } catch (e) {
         document.getElementById('householdList').innerHTML = '<p>Failed to load.</p>';
@@ -569,6 +573,9 @@
         const rating = show.rating
           ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>`
           : '';
+        const series = show.full_series
+          ? ` <span class="show-series">Series Complete</span>`
+          : '';
         const from = show.recommended_by
           ? ` <span class="show-from">from ${escapeHtml(show.recommended_by)}</span>`
           : '';
@@ -600,7 +607,7 @@
 
         return `
           <div class="show-row">
-            <span class="show-info"><span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${from}${network}${notes}</span>
+            <span class="show-info"><span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${series}${network}${from}${notes}</span>
             ${actions}
           </div>
           <div class="show-actors" id="actors-${show.id}">
@@ -669,6 +676,7 @@
       document.getElementById('inputRecommended').value = '';
       document.getElementById('inputNotes').value = '';
       document.getElementById('inputMovie').checked = false;
+      document.getElementById('inputFullSeries').checked = false;
       document.getElementById('inputList').value = currentTab;
       document.getElementById('modalOverlay').classList.remove('hidden');
       document.getElementById('inputTitle').focus();
@@ -686,6 +694,7 @@
       document.getElementById('inputRecommended').value = show.recommended_by || '';
       document.getElementById('inputNotes').value = show.notes || '';
       document.getElementById('inputMovie').checked = !!show.movie;
+      document.getElementById('inputFullSeries').checked = !!show.full_series;
       document.getElementById('inputList').value = show.list;
       document.getElementById('modalOverlay').classList.remove('hidden');
       document.getElementById('inputTitle').focus();
@@ -714,6 +723,7 @@
         recommended_by: document.getElementById('inputRecommended').value.trim() || null,
         notes: document.getElementById('inputNotes').value.trim() || null,
         movie: document.getElementById('inputMovie').checked ? 1 : 0,
+        full_series: document.getElementById('inputFullSeries').checked ? 1 : 0,
         list: document.getElementById('inputList').value,
       };
 
@@ -875,7 +885,7 @@
         const res = await fetch('/api/suggestions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, network, recommended_by: name, notes, movie: document.getElementById('suggestMovie').checked ? 1 : 0, household: householdSlug }),
+          body: JSON.stringify({ title, network, recommended_by: name, notes, movie: document.getElementById('suggestMovie').checked ? 1 : 0, full_series: document.getElementById('suggestFullSeries').checked ? 1 : 0, household: householdSlug }),
         });
         const data = await res.json();
         if (data.duplicate) {

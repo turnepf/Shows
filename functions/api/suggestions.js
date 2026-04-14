@@ -60,7 +60,7 @@ async function fetchOMDB(title, env) {
 export async function onRequestPost(context) {
   const { env, request } = context;
   const body = await request.json();
-  const { title, network, recommended_by, notes, movie, household } = body;
+  const { title, network, recommended_by, notes, movie, full_series, household } = body;
 
   if (!title || !household) {
     return new Response(JSON.stringify({ error: 'Title and household are required' }), { status: 400, headers: corsHeaders() });
@@ -97,8 +97,8 @@ export async function onRequestPost(context) {
   const suggestionNote = notes ? `Suggested · ${notes}` : 'Suggested';
 
   const result = await env.DB.prepare(
-    'INSERT INTO shows (title, network, recommended_by, rating, list, notes, movie, household_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(finalTitle, network || null, recommended_by || null, omdb.rating, 'next', suggestionNote, movie || 0, household).run();
+    'INSERT INTO shows (title, network, recommended_by, rating, list, notes, movie, full_series, household_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(finalTitle, network || null, recommended_by || null, omdb.rating, 'next', suggestionNote, movie || 0, full_series || 0, household).run();
 
   const showId = result.meta.last_row_id;
   if (omdb.actors.length > 0) {

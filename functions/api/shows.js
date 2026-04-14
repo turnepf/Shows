@@ -125,7 +125,7 @@ export async function onRequestPost(context) {
   }
 
   const body = await request.json();
-  const { title, network, recommended_by, list, notes, network_url, movie } = body;
+  const { title, network, recommended_by, list, notes, network_url, movie, full_series } = body;
   if (!title || !list) {
     return new Response(JSON.stringify({ error: 'Title and list are required' }), { status: 400, headers: corsHeaders() });
   }
@@ -146,8 +146,8 @@ export async function onRequestPost(context) {
   const url = cleanUrl(network_url) || generateNetworkUrl(network, finalTitle);
 
   const result = await env.DB.prepare(
-    'INSERT INTO shows (title, network, network_url, recommended_by, rating, list, notes, movie, household_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(finalTitle, network || null, url, recommended_by || null, omdb.rating, list, notes || null, movie || 0, session.household_slug).run();
+    'INSERT INTO shows (title, network, network_url, recommended_by, rating, list, notes, movie, full_series, household_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(finalTitle, network || null, url, recommended_by || null, omdb.rating, list, notes || null, movie || 0, full_series || 0, session.household_slug).run();
 
   const showId = result.meta.last_row_id;
   if (omdb.actors.length > 0) {

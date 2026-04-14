@@ -90,7 +90,7 @@ async function fetchOMDB(title, apiKey) {
 }
 
 export async function onRequestGet(context) {
-  const { env } = context;
+  const { env, request } = context;
   const apiKey = env.OMDB_API_KEY;
   if (!apiKey) {
     return new Response(JSON.stringify({ enriched: 0 }), {
@@ -98,16 +98,19 @@ export async function onRequestGet(context) {
     });
   }
 
+  const url = new URL(request.url);
+  const household = url.searchParams.get('household');
+
   // Find up to 5 shows missing rating or actors or URL
-  const { results: needsRating } = await env.DB.prepare(
-    `SELECT s.id, s.title, s.network, s.network_url
+  let query = `SELECT s.id, s.title, s.network, s.network_url
      FROM shows s
      WHERE s.archived = 0
        AND (s.rating IS NULL
          OR s.network_url IS NULL
-         OR NOT EXISTS (SELECT 1 FROM actors a WHERE a.show_id = s.id))
-     LIMIT 5`
-  ).all();
+         OR NOT EXISTS (SELECT 1 FROM actors a WHERE a.show_id = s.id))`;
+  if (household) query += ` AND s.household_slug = '${household}'`;
+
+  const { results: needsRating } = await env.DB.prepare(query).all();
 
   let enriched = 0;
 
