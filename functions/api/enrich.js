@@ -171,9 +171,8 @@ export async function onRequestGet(context) {
   const tmdbKey = env.TMDB_API_KEY;
   let tmdbUpdated = 0;
   if (tmdbKey) {
-    let tmdbQuery = `SELECT id, title, movie FROM shows
-       WHERE archived = 0 AND movie = 0
-       AND list IN ('watching', 'waiting')`;
+    let tmdbQuery = `SELECT id, title, movie, list FROM shows
+       WHERE archived = 0 AND movie = 0`;
     if (household) tmdbQuery += ` AND household_slug = '${household}'`;
 
     const { results: tmdbShows } = await env.DB.prepare(tmdbQuery).all();
@@ -189,26 +188,33 @@ export async function onRequestGet(context) {
         const detailRes = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${tmdbKey}`);
         const detail = await detailRes.json();
 
-        const nextEp = detail.next_episode_to_air;
-        const newDate = nextEp ? nextEp.air_date : null;
+        // Check if series is complete
+        const status = detail.status;
+        const isComplete = (status === 'Ended' || status === 'Canceled') ? 1 : 0;
 
-        // Get season finale date
+        // Only get dates for watching/waiting lists
+        let newDate = null;
         let endDate = null;
-        if (nextEp) {
-          try {
-            const seasonRes = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/season/${nextEp.season_number}?api_key=${tmdbKey}`);
-            const seasonData = await seasonRes.json();
-            const eps = seasonData.episodes || [];
-            if (eps.length > 0) {
-              const lastEp = eps[eps.length - 1];
-              if (lastEp.air_date) endDate = lastEp.air_date;
-            }
-          } catch (e) {}
+        if (show.list === 'watching' || show.list === 'waiting') {
+          const nextEp = detail.next_episode_to_air;
+          newDate = nextEp ? nextEp.air_date : null;
+
+          if (nextEp) {
+            try {
+              const seasonRes = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/season/${nextEp.season_number}?api_key=${tmdbKey}`);
+              const seasonData = await seasonRes.json();
+              const eps = seasonData.episodes || [];
+              if (eps.length > 0) {
+                const lastEp = eps[eps.length - 1];
+                if (lastEp.air_date) endDate = lastEp.air_date;
+              }
+            } catch (e) {}
+          }
         }
 
         await env.DB.prepare(
-          "UPDATE shows SET next_season_date = ?, season_end_date = ?, updated_at = datetime('now') WHERE id = ?"
-        ).bind(newDate, endDate, show.id).run();
+          "UPDATE shows SET next_season_date = ?, season_end_date = ?, full_series = ?, updated_at = datetime('now') WHERE id = ?"
+        ).bind(newDate, endDate, isComplete, show.id).run();
         tmdbUpdated++;
       } catch (e) {}
     }
