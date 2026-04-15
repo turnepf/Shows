@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS shows (
   notes TEXT,
   movie INTEGER DEFAULT 0,
   full_series INTEGER DEFAULT 0,
+  watching_with TEXT,
   next_season_date TEXT,
   season_end_date TEXT,
   archived INTEGER DEFAULT 0,

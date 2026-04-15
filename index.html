@@ -138,6 +138,7 @@
 
     .show-from { color: #95a5a6; font-size: 13px; white-space: nowrap; }
     .show-on { color: #95a5a6; font-size: 13px; }
+    .show-watching-with { color: #8B5E3C; font-size: 13px; white-space: nowrap; }
     .show-notes-inline { color: #aaa; font-size: 12px; font-style: italic; white-space: nowrap; }
 
     .show-actions-inline { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
@@ -346,6 +347,9 @@
 
       <label for="inputNotes">Notes</label>
       <input type="text" id="inputNotes" placeholder="e.g. Movie, Harlan Coben">
+
+      <label for="inputWatchingWith">Watching With</label>
+      <input type="text" id="inputWatchingWith" placeholder="e.g. Ali, the whole family">
 
       <label class="checkbox-label"><input type="checkbox" id="inputMovie"> Movie</label>
       <label class="checkbox-label"><input type="checkbox" id="inputFullSeries"> Series Complete</label>
@@ -618,6 +622,9 @@
         const notes = showNotes && show.notes
           ? ` <span class="show-notes-inline">(${escapeHtml(show.notes)})</span>`
           : '';
+        const watchingWith = show.watching_with
+          ? ` <span class="show-watching-with">with ${escapeHtml(show.watching_with)}</span>`
+          : '';
 
         let actions = '';
         if (isEditor) {
@@ -637,7 +644,7 @@
 
         return `
           <div class="show-row">
-            <span class="show-info"><span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${series}${network}${nextDate}${from}${notes}</span>
+            <span class="show-info"><span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${series}${network}${nextDate}${from}${watchingWith}${notes}</span>
             ${actions}
           </div>
           <div class="show-actors" id="actors-${show.id}">
@@ -715,6 +722,7 @@
       document.getElementById('inputUrl').value = '';
       document.getElementById('inputRecommended').value = '';
       document.getElementById('inputNotes').value = '';
+      document.getElementById('inputWatchingWith').value = '';
       document.getElementById('inputMovie').checked = false;
       document.getElementById('inputFullSeries').checked = false;
       document.getElementById('inputList').value = currentTab;
@@ -733,6 +741,7 @@
       document.getElementById('inputUrl').value = show.network_url || '';
       document.getElementById('inputRecommended').value = show.recommended_by || '';
       document.getElementById('inputNotes').value = show.notes || '';
+      document.getElementById('inputWatchingWith').value = show.watching_with || '';
       document.getElementById('inputMovie').checked = !!show.movie;
       document.getElementById('inputFullSeries').checked = !!show.full_series;
       document.getElementById('inputList').value = show.list;
@@ -762,6 +771,7 @@
         network_url: cleanUrl(document.getElementById('inputUrl').value.trim()) || null,
         recommended_by: document.getElementById('inputRecommended').value.trim() || null,
         notes: document.getElementById('inputNotes').value.trim() || null,
+        watching_with: document.getElementById('inputWatchingWith').value.trim() || null,
         movie: document.getElementById('inputMovie').checked ? 1 : 0,
         full_series: document.getElementById('inputFullSeries').checked ? 1 : 0,
         list: document.getElementById('inputList').value,

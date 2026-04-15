@@ -108,14 +108,15 @@ export async function onRequestPut(context) {
   const notes = val('notes');
   const movie = val('movie');
   const full_series = val('full_series');
+  const watching_with = val('watching_with');
   const archived = val('archived');
 
   const omdb = await fetchOMDB(title, env);
   const rating = omdb.rating || existing.rating;
 
   await env.DB.prepare(
-    "UPDATE shows SET title = ?, network = ?, network_url = ?, recommended_by = ?, list = ?, notes = ?, movie = ?, full_series = ?, rating = ?, archived = ?, updated_at = datetime('now') WHERE id = ?"
-  ).bind(title, network, network_url, recommended_by, list, notes, movie, full_series, rating, archived, params.id).run();
+    "UPDATE shows SET title = ?, network = ?, network_url = ?, recommended_by = ?, list = ?, notes = ?, movie = ?, full_series = ?, watching_with = ?, rating = ?, archived = ?, updated_at = datetime('now') WHERE id = ?"
+  ).bind(title, network, network_url, recommended_by, list, notes, movie, full_series, watching_with, rating, archived, params.id).run();
 
   if (omdb.actors.length > 0) {
     await env.DB.prepare('DELETE FROM actors WHERE show_id = ?').bind(params.id).run();
