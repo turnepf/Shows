@@ -3,10 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Shows</title>
+  <title>Show Picker Club</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CP9N26NG19"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-CP9N26NG19');</script>
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
   <meta name="theme-color" content="#2C3E50">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -57,6 +61,11 @@
       border: 1px solid rgba(255,255,255,0.3);
     }
     .btn-login:hover { background: rgba(255,255,255,0.25); }
+    .btn-login.active {
+      background: #E67E22;
+      border-color: #E67E22;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    }
 
     .btn-add { background: #E67E22; color: #fff; }
     .btn-add:hover { background: #d35400; }
@@ -64,7 +73,7 @@
     .btn-small { padding: 4px 8px; font-size: 11px; border-radius: 4px; }
     .btn-move { background: #3498db; color: #fff; }
     .btn-archive { background: #95a5a6; color: #fff; }
-    .btn-edit { background: #2ecc71; color: #fff; }
+    .btn-edit { background: #34495e; color: #fff; }
     .btn-delete { background: #e74c3c; color: #fff; }
 
     .tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; }
@@ -72,18 +81,24 @@
 
     .tab {
       flex: 1;
-      padding: 10px 0;
-      color: rgba(255,255,255,0.6);
-      font-size: 13px;
+      padding: 8px 4px;
+      color: rgba(255,255,255,0.5);
+      font-size: 12px;
       font-weight: 500;
       cursor: pointer;
       white-space: nowrap;
-      border-bottom: 3px solid transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
       transition: all 0.2s;
       text-align: center;
+      background: transparent;
     }
-    .tab:hover { color: rgba(255,255,255,0.85); }
-    .tab.active { color: #fff; border-bottom-color: #E67E22; }
+    .tab:hover { color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.4); }
+    .tab.active { color: #fff; font-weight: 600; }
+    .tab.active[data-list="watching"] { background: #27ae60; border-color: #27ae60; }
+    .tab.active[data-list="waiting"] { background: #2980b9; border-color: #2980b9; }
+    .tab.active[data-list="recommending"] { background: #8e44ad; border-color: #8e44ad; }
+    .tab.active[data-list="next"] { background: #E67E22; border-color: #E67E22; }
 
     .section-desc {
       text-align: center;
@@ -111,19 +126,11 @@
     .show-info { flex: 1; min-width: 0; line-height: 1.4; }
 
     .show-title { font-weight: 600; color: #2C3E50; }
-    .show-title.clickable { cursor: pointer; }
-    .show-title.clickable:hover { color: #E67E22; }
+    .show-title.clickable { cursor: pointer; text-decoration: underline; text-decoration-color: #bdc3c7; text-underline-offset: 2px; }
+    .show-title.clickable:hover { color: #E67E22; text-decoration-color: #E67E22; }
 
     .show-movie { font-weight: 400; color: #95a5a6; font-size: 12px; }
 
-    .show-arrow {
-      font-size: 10px;
-      color: #95a5a6;
-      display: inline-block;
-      transition: transform 0.2s;
-      margin-right: 2px;
-    }
-    .show-arrow.expanded { transform: rotate(90deg); }
 
     .show-rating { color: #7f8c8d; font-size: 13px; white-space: nowrap; }
     .show-rating .star { color: #f1c40f; }
@@ -137,17 +144,70 @@
     .show-next-date { color: #E67E22; font-size: 12px; font-weight: 500; white-space: nowrap; }
 
     .show-from { color: #95a5a6; font-size: 13px; white-space: nowrap; }
+    .show-detail-line { font-size: 12px; color: #7f8c8d; padding: 2px 0; }
+
+    .list-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    .list-chip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 34px;
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 500;
+      border: 1.5px solid var(--chip-color);
+      border-radius: 6px;
+      color: var(--chip-color);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+      text-align: center;
+      -webkit-text-size-adjust: 100%;
+      box-sizing: border-box;
+    }
+    .list-chip.selected {
+      background: var(--chip-color);
+      color: #fff;
+    }
+    .show-via { color: #8e7cc3; font-size: 12px; font-style: italic; white-space: nowrap; }
     .show-on { color: #95a5a6; font-size: 13px; }
     .show-watching-with { color: #8B5E3C; font-size: 13px; white-space: nowrap; }
     .show-notes-inline { color: #aaa; font-size: 12px; font-style: italic; white-space: nowrap; }
 
     .show-actions-inline { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
-    .show-actions-inline select { padding: 3px 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px; background: #fff; }
 
     .show-actors { padding: 4px 0 8px 16px; display: none; font-size: 13px; color: #5a5a5a; }
     .show-actors.visible { display: block; }
     .actor-list { display: flex; flex-wrap: wrap; gap: 4px; }
     .actor-tag { background: #f0ebe3; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+
+    .suggest-bar { text-align: center; padding: 16px 0 4px; }
+    .suggest-btn {
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      background: #2C3E50;
+      color: #fff;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+    }
+    .suggest-btn:hover { background: #1a252f; }
+
+    .share-btn {
+      background: none;
+      border: none;
+      color: #95a5a6;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0 6px;
+      line-height: 1;
+      font-family: inherit;
+      transition: color 0.2s;
+    }
+    .share-btn:hover { color: #2C3E50; }
 
     .network-counts { text-align: center; font-size: 12px; color: #95a5a6; padding: 12px 0 4px; }
 
@@ -169,6 +229,18 @@
       background: #fff;
       color: #aaa;
     }
+    .sort-select {
+      padding: 6px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      border: 1px solid #ddd;
+      border-radius: 16px;
+      background: #fff;
+      color: #2C3E50;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+
     .toggle-pill.active {
       background: #2C3E50;
       color: #fff;
@@ -182,21 +254,22 @@
     .landing { max-width: 500px; margin: 60px auto; padding: 0 20px; text-align: center; }
     .landing h1 { font-size: 28px; color: #2C3E50; margin-bottom: 8px; }
     .landing p { color: #7f8c8d; margin-bottom: 30px; }
-    .household-list { display: flex; flex-direction: column; gap: 12px; }
-    .household-card {
+    .member-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    @media (min-width: 480px) { .member-list { grid-template-columns: 1fr 1fr 1fr; } }
+    .member-card {
       display: block;
       background: #fff;
       border: 1px solid #e8e0d4;
-      border-radius: 10px;
-      padding: 18px 20px;
+      border-radius: 8px;
+      padding: 10px 14px;
       text-decoration: none;
       color: #2C3E50;
-      font-size: 18px;
+      font-size: 14px;
       font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
       transition: box-shadow 0.2s, transform 0.2s;
     }
-    .household-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .member-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.1); transform: translateY(-1px); }
 
     /* Modal */
     .modal-overlay {
@@ -279,20 +352,56 @@
   <!-- Landing Page -->
   <div id="landingPage" class="hidden">
     <div class="landing">
-      <h1>Show Tracker</h1>
-      <p>Pick a household to see their shows.</p>
-      <div class="household-list" id="householdList"></div>
+      <h1>Show Picker Club</h1>
+      <div id="popularSection" id="popular" style="margin-top: 8px; margin-bottom: 24px; display: none;">
+        <h3 id="popular" style="font-size: 15px; color: #2C3E50; margin-bottom: 8px; text-align: center;">What Members Are Watching</h3>
+        <div id="popularList" class="show-list" style="text-align: left;"></div>
+      </div>
+
+      <h3 id="members" style="font-size: 15px; color: #2C3E50; margin-bottom: 8px; text-align: center;">Members</h3>
+      <div class="member-list" id="memberList" style="scroll-margin-top: 8px;">
+      </div>
+      <p style="margin-top: 16px; font-size: 13px; color: #7f8c8d; font-style: italic;">Want to join the Show Picker Club? Let Patrick know!</p>
+
+      <h3 id="whats-new" style="font-size: 15px; color: #2C3E50; margin-bottom: 8px; margin-top: 24px; text-align: center;">What's New</h3>
+      <div style="padding: 16px 24px; background: #f0ebe3; border-radius: 10px; font-size: 13px; color: #555; line-height: 1.8; text-align: left;">
+        <strong>4/17</strong> &mdash; <strong>Quick actions.</strong> On the Watching list, "Watched it" moves a show to Recommending and "Season done" moves it to Waiting &mdash; no dropdown needed.<br>
+        <strong>4/17</strong> &mdash; <strong>Genre tags.</strong> Shows now display genre info (Drama, Comedy, Thriller, etc.) pulled from TMDB. Toggle visibility with the Genres pill.<br>
+        <strong>4/17</strong> &mdash; <strong>Share this list.</strong> Share a member's list with friends via text, email, or clipboard.<br>
+        <strong>4/16</strong> &mdash; <strong>What Members Are Watching.</strong> The home page now shows the most popular shows across all members. Tap <strong>+</strong> to add any of them to your own list.<br>
+        <strong>4/15</strong> &mdash; <strong>New domain!</strong> Show Picker Club is now at <a href="https://showpicker.club" style="color: #E67E22; font-weight: 600;">showpicker.club</a>. The old link still works too.<br>
+        <strong>4/15</strong> &mdash; <strong>Share shows to other members.</strong> See a show on someone else's list that you want to add to yours? Tap the <strong>+</strong> button next to any show to send it to another member's Up Next list. It carries over the rating, network link, actors, and all the details. If you're logged in, your name auto-fills.<br>
+        <strong>4/15</strong> &mdash; <strong>TV mode.</strong> Browse your lists on the big screen. Open <strong>showpicker.club/tv</strong> in your Fire Stick, Roku, or smart TV browser. Large text, dark background, and remote-friendly navigation. The app will also suggest switching to TV mode automatically if it detects you're on a big screen.<br>
+        <strong>4/15</strong> &mdash; <strong>Sort your lists.</strong> Use the sort dropdown at the bottom of any list to sort by Rating (default), A&ndash;Z, or Date Added.<br>
+        <strong>4/15</strong> &mdash; <strong>Back to all members.</strong> Tap the &#9664; arrow next to the member name to get back to the main list.<br>
+        <strong>4/15</strong> &mdash; <strong>Network links sync across members.</strong> When someone finds a good direct link for a show, it automatically copies to matching shows on other members' lists (runs once per day).<br>
+        <strong>4/15</strong> &mdash; <strong>Watching With field.</strong> Track who you're watching a show with.<br>
+        <strong>4/14</strong> &mdash; <strong>Series Complete icon.</strong> Shows that have ended get a &#127916; badge.<br>
+        <strong>4/13</strong> &mdash; <strong>Suggest a Show.</strong> Not logged in? You can still suggest shows to any member via the button at the bottom of any list.<br>
+        <strong>4/13</strong> &mdash; <strong>Toggle pills.</strong> Show or hide Ratings, Networks, Recommended By, Dates, and Notes with the pill buttons at the bottom.<br>
+        <strong>4/13</strong> &mdash; <strong>Season dates.</strong> See when the next season starts (and when it ends) pulled automatically from TMDB.<br>
+        <strong>4/13</strong> &mdash; <strong>Multi-member support.</strong> One app, multiple members &mdash; each with their own lists and login codes.<br>
+        <strong>4/13</strong> &mdash; <strong>PWA support.</strong> Add Show Picker Club to your phone's home screen for an app-like experience.<br>
+        <strong>4/12</strong> &mdash; <strong>Initial launch.</strong> Add, edit, move, and archive shows across four lists: Watching, Waiting, Recommending, and Up Next. Auto-enriched with IMDB ratings, actors, and network links.
+      </div>
+
+      <footer style="padding: 24px 0 20px; font-size: 12px; color: #95a5a6; text-align: center;">
+        &copy; 2025 Patrick Turner.<br>
+        Special thanks to Sherry, William, Whitt, Chuck and others for great ideas for features!<br>
+        Please share your ideas for improvements with Patrick!
+      </footer>
     </div>
   </div>
 
-  <!-- Household Show Page -->
+  <!-- Member Show Page -->
   <div id="showPage" class="hidden">
     <header>
       <div class="header-top">
+        <a href="/" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 18px; margin-right: 8px;" title="All members">&#9664;</a>
         <h1 id="appTitle"></h1>
         <div class="header-actions">
-          <button class="btn btn-add hidden" id="addBtn" onclick="openAddModal()">+ Add</button>
-          <button class="btn btn-login" id="loginBtn" onclick="login()">Login</button>
+          <button class="btn btn-add hidden" id="addBtn" title="Add a new show" onclick="openAddModal()">+ Add</button>
+          <button class="btn btn-login" id="loginBtn" title="Toggle edit mode" onclick="login()">Edit</button>
         </div>
       </div>
       <div class="tabs" id="tabs">
@@ -310,6 +419,11 @@
       <div class="empty hidden" id="empty">No shows in this list yet.</div>
     </main>
 
+    <footer style="text-align: center; padding: 24px 16px 32px; font-size: 12px; color: #95a5a6;">
+      &copy; 2025 Patrick Turner. Special thanks to Sherry, William, Whitt, Chuck and others for great ideas for features!<br>
+        Please share your ideas for improvements with Patrick!
+    </footer>
+
   </div>
 
   <!-- Add/Edit Modal -->
@@ -322,19 +436,22 @@
       <label for="inputNetwork">Network</label>
       <select id="inputNetwork">
         <option value="">— Select —</option>
-        <option value="Netflix">Netflix</option>
-        <option value="HBO">HBO (Max)</option>
-        <option value="Apple TV">Apple TV+</option>
-        <option value="Hulu">Hulu</option>
-        <option value="Paramount">Paramount+</option>
-        <option value="Peacock">Peacock</option>
         <option value="Amazon">Amazon Prime</option>
+        <option value="Apple TV">Apple TV+</option>
         <option value="Bravo">Bravo</option>
         <option value="Disney+">Disney+</option>
+        <option value="Food Network">Food Network</option>
+        <option value="HBO">HBO (Max)</option>
+        <option value="Hulu">Hulu</option>
+        <option value="NBC">NBC</option>
+        <option value="Netflix">Netflix</option>
+        <option value="Paramount">Paramount+</option>
+        <option value="Peacock">Peacock</option>
         <option value="Showtime">Showtime</option>
         <option value="Starz">Starz</option>
-        <option value="NBC">NBC</option>
+        <option value="__other">Network not listed</option>
       </select>
+      <input type="text" id="inputNetworkOther" placeholder="Enter network name" style="display:none; margin-top: 6px;">
 
       <label for="inputUrl">Show URL</label>
       <div class="url-row">
@@ -354,13 +471,13 @@
       <label class="checkbox-label"><input type="checkbox" id="inputMovie"> Movie</label>
       <label class="checkbox-label"><input type="checkbox" id="inputFullSeries"> Series Complete</label>
 
-      <label for="inputList">List</label>
-      <select id="inputList">
-        <option value="watching">Watching</option>
-        <option value="waiting">Waiting on Next Season</option>
-        <option value="recommending">Recommending</option>
-        <option value="next">Up Next</option>
-      </select>
+      <label>List</label>
+      <div class="list-chips" id="inputListChips">
+        <div class="list-chip selected" data-value="watching" style="--chip-color: #27ae60;" onclick="selectListChip(this)">Watching</div>
+        <div class="list-chip" data-value="waiting" style="--chip-color: #2980b9;" onclick="selectListChip(this)">Waiting</div>
+        <div class="list-chip" data-value="recommending" style="--chip-color: #8e44ad;" onclick="selectListChip(this)">Recommending</div>
+        <div class="list-chip" data-value="next" style="--chip-color: #E67E22;" onclick="selectListChip(this)">Up Next</div>
+      </div>
 
       <div class="modal-actions">
         <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
@@ -382,19 +499,22 @@
       <label for="suggestNetwork">Network</label>
       <select id="suggestNetwork">
         <option value="">— Select —</option>
-        <option value="Netflix">Netflix</option>
-        <option value="HBO">HBO (Max)</option>
-        <option value="Apple TV">Apple TV+</option>
-        <option value="Hulu">Hulu</option>
-        <option value="Paramount">Paramount+</option>
-        <option value="Peacock">Peacock</option>
         <option value="Amazon">Amazon Prime</option>
+        <option value="Apple TV">Apple TV+</option>
         <option value="Bravo">Bravo</option>
         <option value="Disney+">Disney+</option>
+        <option value="Food Network">Food Network</option>
+        <option value="HBO">HBO (Max)</option>
+        <option value="Hulu">Hulu</option>
+        <option value="NBC">NBC</option>
+        <option value="Netflix">Netflix</option>
+        <option value="Paramount">Paramount+</option>
+        <option value="Peacock">Peacock</option>
         <option value="Showtime">Showtime</option>
         <option value="Starz">Starz</option>
-        <option value="NBC">NBC</option>
+        <option value="__other">Network not listed</option>
       </select>
+      <input type="text" id="suggestNetworkOther" placeholder="Enter network name" style="display:none; margin-top: 6px;">
 
       <label for="suggestNotes">Notes</label>
       <input type="text" id="suggestNotes" placeholder="e.g. Great thriller, has Mark Ruffalo">
@@ -405,6 +525,57 @@
       <div class="modal-actions">
         <button class="btn btn-cancel" onclick="closeSuggestModal()">Cancel</button>
         <button class="btn btn-save" onclick="submitSuggestion()">Send Suggestion</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share to Member Modal -->
+  <div class="modal-overlay hidden" id="shareOverlay" onclick="closeShareModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2>Add to a Member's List</h2>
+      <input type="hidden" id="shareShowId">
+
+      <label for="shareTitle">Show</label>
+      <input type="text" id="shareTitle" readonly style="background: #f0ebe3; color: #666;">
+
+      <label for="shareMember">Send to</label>
+      <select id="shareMember"></select>
+
+      <label for="shareName">Your Name</label>
+      <input type="text" id="shareName" placeholder="e.g. Whitt">
+
+      <label for="shareNotes">Notes</label>
+      <input type="text" id="shareNotes" placeholder="e.g. You'll love this one">
+
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeShareModal()">Cancel</button>
+        <button class="btn btn-save" onclick="submitShare()">Share</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add to My List Modal -->
+  <div class="modal-overlay hidden" id="addMyListOverlay" onclick="closeAddMyList(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2>Add to My List</h2>
+
+      <label for="addMyTitle">Show</label>
+      <input type="text" id="addMyTitle" readonly style="background: #f0ebe3; color: #666;">
+
+      <label for="addMyList">Add to</label>
+      <select id="addMyList">
+        <option value="watching">Watching</option>
+        <option value="waiting">Waiting on Next Season</option>
+        <option value="recommending">Recommending</option>
+        <option value="next">Up Next</option>
+      </select>
+
+      <label for="addMyNotes">Notes</label>
+      <input type="text" id="addMyNotes" placeholder="e.g. Great thriller">
+
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeAddMyList()">Cancel</button>
+        <button class="btn btn-save" onclick="submitAddMyList()">Add</button>
       </div>
     </div>
   </div>
@@ -423,6 +594,9 @@
       'NBC': { base: 'https://www.nbc.com/search' },
       'Starz': { base: 'https://www.starz.com/search', param: 'q' },
       'Showtime': { base: 'https://www.sho.com/search', param: 'q' },
+      'Food Network': { base: 'https://www.foodnetwork.com/search', param: 'q' },
+      'Fox': { base: 'https://www.fox.com/search' },
+      'CBS': { base: 'https://www.cbs.com/search/' },
     };
 
     function buildSearchUrl(network, title) {
@@ -439,15 +613,51 @@
     let currentTab = 'watching';
     let isEditor = false;
     let editingId = null;
-    let householdSlug = null;
-    let householdName = '';
+    let memberSlug = null;
+    let memberName = '';
+    let editorName = '';
+    let authMember = null;
     let owners = '';
 
-    const TOGGLES = ['rating', 'network', 'from', 'dates', 'notes'];
-    const TOGGLE_LABELS = { rating: 'Ratings', network: 'Networks', from: 'Recommended By', dates: 'Dates', notes: 'Notes' };
+    const TOGGLES = ['rating', 'network', 'from', 'dates'];
+    const TOGGLE_LABELS = { rating: 'Ratings', network: 'Networks', from: 'Recommended By', dates: 'Dates' };
     function getVisible(key) { return localStorage.getItem(`hide_${key}`) !== '1'; }
     function toggleVisible(key) {
       localStorage.setItem(`hide_${key}`, getVisible(key) ? '1' : '0');
+      renderShows();
+    }
+
+    document.getElementById('inputNetwork').addEventListener('change', function() {
+      document.getElementById('inputNetworkOther').style.display = this.value === '__other' ? 'block' : 'none';
+    });
+    document.getElementById('suggestNetwork').addEventListener('change', function() {
+      document.getElementById('suggestNetworkOther').style.display = this.value === '__other' ? 'block' : 'none';
+    });
+
+    function getNetwork(selectId, otherId) {
+      const val = document.getElementById(selectId).value;
+      if (val === '__other') return document.getElementById(otherId).value.trim() || null;
+      return val || null;
+    }
+
+    function selectListChip(el) {
+      el.parentElement.querySelectorAll('.list-chip').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function getSelectedList() {
+      const sel = document.querySelector('#inputListChips .list-chip.selected');
+      return sel ? sel.dataset.value : 'watching';
+    }
+
+    function setSelectedList(value) {
+      document.querySelectorAll('#inputListChips .list-chip').forEach(c => {
+        c.classList.toggle('selected', c.dataset.value === value);
+      });
+    }
+
+    function changeSort(value) {
+      localStorage.setItem('sort_order', value);
       renderShows();
     }
 
@@ -458,54 +668,87 @@
       next: "Shows that have been recommended but we haven't watched.",
     };
 
-    // Determine if we're on landing page or household page
+    // Determine if we're on landing page or member page
     const path = window.location.pathname.replace(/\/$/, '');
     const slug = path.substring(1); // remove leading /
 
     if (!slug) {
       showLanding();
     } else {
-      showHousehold(slug);
+      showMember(slug);
     }
 
     async function showLanding() {
       document.getElementById('landingPage').classList.remove('hidden');
-      document.title = 'Show Tracker';
+      document.title = 'Show Picker Club';
       try {
-        const res = await fetch('/api/households');
+        const res = await fetch('/api/members');
         const data = await res.json();
-        const list = document.getElementById('householdList');
-        list.innerHTML = data.households.map(h =>
-          `<a class="household-card" href="/${h.slug}" target="_blank">${escapeHtml(h.name)}</a>`
+        const list = document.getElementById('memberList');
+        list.innerHTML = data.members.map(h =>
+          `<a class="member-card" href="/${h.slug}">${escapeHtml(h.name.split(' ')[0])}</a>`
         ).join('');
       } catch (e) {
-        document.getElementById('householdList').innerHTML = '<p>Failed to load.</p>';
+        document.getElementById('memberList').innerHTML = '<p>Failed to load.</p>';
       }
+
+      // Load popular shows
+      try {
+        const popRes = await fetch('/api/popular');
+        const popData = await popRes.json();
+        if (popData.shows && popData.shows.length > 0) {
+          const popList = document.getElementById('popularList');
+          const hasRealUrl = (url) => url && !url.includes('/search') && !url.includes('/s?') && url !== '#';
+          popList.innerHTML = popData.shows.map((show, i) => {
+            const rating = show.rating ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>` : '';
+            const network = show.network
+              ? hasRealUrl(show.network_url)
+                ? ` <span class="show-on">on</span> <a class="show-network" href="${show.network_url}" target="_blank" rel="noopener">${escapeHtml(show.network)}</a>`
+                : ` <span class="show-on">on</span> <span class="show-network-plain">${escapeHtml(show.network)}</span>`
+              : '';
+            const memberList = (show.members || []).join(', ');
+            const badge = ` <span style="font-size: 11px; color: #95a5a6; cursor: pointer; text-decoration: underline dotted;" onclick="alert('${memberList.replace(/'/g, "\\'")}')" title="${memberList}">${show.member_count} Members</span>`;
+            return `<div class="show-row popular-row" ${i >= 5 ? 'style="display:none;"' : ''}>
+              <button class="share-btn popular-add-btn" style="display:none;" onclick="openAddMyList('${escapeHtml(show.title).replace(/'/g, "\\'")}', '${escapeHtml(show.network || '').replace(/'/g, "\\'")}', '${escapeHtml(show.network_url || '').replace(/'/g, "\\'")}', ${show.movie || 0})" title="Add to my list">+</button>
+              <span class="show-info"><span class="show-title clickable" onclick="toggleActors(${show.id})">${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${network}${badge}</span>
+            </div>
+            <div class="show-actors" id="actors-${show.id}">
+              <div class="actor-list" id="actors-list-${show.id}"></div>
+            </div>`;
+          }).join('');
+          if (popData.shows.length > 5) {
+            popList.innerHTML += `<div id="popularToggle" style="text-align: center; padding: 8px 0;"><button onclick="togglePopular(true)" style="background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">More &#9660;</button></div>`;
+          }
+          document.getElementById('popularSection').style.display = 'block';
+        }
+      } catch (e) {}
+      // Check auth after popular list is rendered so + buttons can be shown
+      checkAuth();
     }
 
-    async function showHousehold(slug) {
-      householdSlug = slug;
+    async function showMember(slug) {
+      memberSlug = slug;
       document.getElementById('showPage').classList.remove('hidden');
 
-      // Get household name
+      // Get member name
       try {
-        const res = await fetch('/api/households');
+        const res = await fetch('/api/members');
         const data = await res.json();
-        const h = data.households.find(h => h.slug === slug);
+        const h = data.members.find(h => h.slug === slug);
         if (h) {
-          householdName = h.name;
-          owners = h.name.replace("'s Shows", '').replace("' Shows", '');
+          owners = h.name.split(' ')[0];
+          memberName = `${owners}'s Shows`;
         } else {
-          householdName = 'Shows';
+          memberName = 'Shows';
           owners = 'the owners';
         }
       } catch (e) {
-        householdName = 'Shows';
+        memberName = 'Shows';
         owners = 'the owners';
       }
 
-      document.title = householdName;
-      document.getElementById('appTitle').textContent = householdName;
+      document.title = memberName;
+      document.getElementById('appTitle').textContent = memberName;
 
       // Check hash for tab
       const hash = window.location.hash.replace('#', '');
@@ -519,37 +762,69 @@
 
       checkAuth();
       loadShows();
-      fetch(`/api/enrich?household=${slug}`).catch(() => {});
+      fetch(`/api/enrich?member=${slug}`).catch(() => {});
+      // Sync good URLs across members once per day
+      const lastSync = localStorage.getItem('last_url_sync');
+      const now = Date.now();
+      if (!lastSync || now - parseInt(lastSync) > 86400000) {
+        fetch('/api/sync-urls').then(() => localStorage.setItem('last_url_sync', now)).catch(() => {});
+      }
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+      // Detect TV-like environment and offer TV view
+      const dismissed = sessionStorage.getItem('tv_banner_dismissed');
+      if (!dismissed && window.screen.width >= 1920 && !('ontouchstart' in window)) {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#2C3E50;color:#fff;padding:14px 20px;text-align:center;font-size:15px;display:flex;align-items:center;justify-content:center;gap:12px;';
+        banner.innerHTML = `Watching on a TV? <a href="/tv/${slug}" style="color:#E67E22;font-weight:600;text-decoration:underline;">Switch to TV view</a> <button onclick="this.parentElement.remove();sessionStorage.setItem('tv_banner_dismissed','1')" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:18px;cursor:pointer;margin-left:8px;">&#10005;</button>`;
+        document.body.prepend(banner);
+      }
     }
 
     async function checkAuth() {
       try {
         const res = await fetch('/auth/check');
         const data = await res.json();
-        if (data.authenticated && data.household === householdSlug) {
-          isEditor = true;
-          document.getElementById('addBtn').classList.remove('hidden');
-          document.getElementById('loginBtn').textContent = 'Logout';
-          document.getElementById('loginBtn').onclick = logout;
-          renderShows();
+        if (data.authenticated) {
+          editorName = data.email || '';
+          authMember = data.member;
+          // Show + buttons on popular list if on landing page
+          document.querySelectorAll('.popular-add-btn').forEach(b => b.style.display = '');
+          // Don't auto-enter edit mode; wait for user to click Edit
         }
       } catch (e) {}
     }
 
     function login() {
-      const code = prompt('Enter 4-digit code:');
-      if (!code) return;
-      window.location.href = '/auth/login?code=' + encodeURIComponent(code) + '&household=' + encodeURIComponent(householdSlug);
-    }
-
-    async function logout() {
-      window.location.href = '/auth/logout';
+      if (isEditor) {
+        // Toggle out of edit mode
+        isEditor = false;
+        document.getElementById('addBtn').classList.add('hidden');
+        document.getElementById('loginBtn').classList.remove('active');
+        renderShows();
+        return;
+      }
+      // If we have a valid session, just re-enter edit mode
+      fetch('/auth/check').then(r => r.json()).then(data => {
+        if (data.authenticated && data.member === memberSlug) {
+          isEditor = true;
+          document.getElementById('addBtn').classList.remove('hidden');
+          document.getElementById('loginBtn').classList.add('active');
+          renderShows();
+        } else {
+          const code = prompt('Enter 4-digit code:');
+          if (!code) return;
+          window.location.href = '/auth/login?code=' + encodeURIComponent(code) + '&member=' + encodeURIComponent(memberSlug);
+        }
+      }).catch(() => {
+        const code = prompt('Enter 4-digit code:');
+        if (!code) return;
+        window.location.href = '/auth/login?code=' + encodeURIComponent(code) + '&member=' + encodeURIComponent(memberSlug);
+      });
     }
 
     async function loadShows() {
       try {
-        const res = await fetch(`/api/shows?household=${householdSlug}`);
+        const res = await fetch(`/api/shows?member=${memberSlug}`);
         const data = await res.json();
         shows = data.shows || [];
         renderShows();
@@ -558,9 +833,34 @@
       }
     }
 
+    const TAB_LABELS = { watching: 'Watching', waiting: 'Waiting', recommending: 'Recommending', next: 'Up Next' };
+
     function updateDesc() {
       const count = shows.filter(s => s.list === currentTab).length;
-      document.getElementById('sectionDesc').textContent = SECTION_DESCS[currentTab] + ` (${count} show${count !== 1 ? 's' : ''})`;
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      const suggestCount = shows.filter(s => s.list === 'next' && s.recommended_by && s.created_at >= weekAgo).length;
+      const lastSeen = parseInt(localStorage.getItem('suggestions_seen_count') || '0');
+      const hasNew = isEditor && currentTab === 'next' && suggestCount > lastSeen;
+      const desc = SECTION_DESCS[currentTab] + ` (${count} show${count !== 1 ? 's' : ''})`;
+      const el = document.getElementById('sectionDesc');
+      if (hasNew) {
+        el.innerHTML = desc + `<br><span style="color:#E67E22;font-weight:600;">You have new suggestions from members!</span>`;
+      } else {
+        el.textContent = desc;
+      }
+    }
+
+    function updateTabCounts() {
+      document.querySelectorAll('.tab').forEach(t => {
+        t.textContent = TAB_LABELS[t.dataset.list];
+      });
+
+      // Mark suggestions as seen when viewing Up Next
+      if (currentTab === 'next') {
+        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+        const suggestCount = shows.filter(s => s.list === 'next' && s.recommended_by && s.created_at >= weekAgo).length;
+        localStorage.setItem('suggestions_seen_count', suggestCount);
+      }
     }
 
     function switchTab(list) {
@@ -575,13 +875,19 @@
 
     function renderShows() {
       updateDesc();
+      updateTabCounts();
       const container = document.getElementById('showList');
       const loading = document.getElementById('loading');
       const empty = document.getElementById('empty');
       loading.classList.add('hidden');
 
+      const sortOrder = localStorage.getItem('sort_order') || 'rating';
       const filtered = shows.filter(s => s.list === currentTab)
-        .sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+        .sort((a, b) => {
+          if (sortOrder === 'alpha') return (a.title || '').localeCompare(b.title || '');
+          if (sortOrder === 'added') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+          return (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0);
+        });
       if (filtered.length === 0) {
         container.innerHTML = '';
         empty.classList.remove('hidden');
@@ -600,7 +906,7 @@
           ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>`
           : '';
         const series = show.full_series
-          ? ' 🎬'
+          ? ' <span title="Series Complete">🎬</span>'
           : '';
         const from = showFrom && show.recommended_by
           ? ` <span class="show-from">from ${escapeHtml(show.recommended_by)}</span>`
@@ -619,32 +925,35 @@
             ? ` <span class="show-next-date">(${start} – ${end})</span>`
             : ` <span class="show-next-date">(${start})</span>`;
         }
-        const notes = showNotes && show.notes
-          ? ` <span class="show-notes-inline">(${escapeHtml(show.notes)})</span>`
-          : '';
         const watchingWith = show.watching_with
           ? ` <span class="show-watching-with">with ${escapeHtml(show.watching_with)}</span>`
           : '';
 
         let actions = '';
         if (isEditor) {
+          let quickBtns = '';
+          if (show.list === 'watching') {
+            quickBtns = `<button class="btn btn-small" style="background:#8e44ad;color:#fff;" title="Move to Recommending" onclick="moveShow(${show.id}, 'recommending')">Watched it</button>
+               <button class="btn btn-small" style="background:#2980b9;color:#fff;" title="Move to Waiting on Next Season" onclick="moveShow(${show.id}, 'waiting')">Season done</button>`;
+          } else if (show.list === 'waiting') {
+            quickBtns = `<button class="btn btn-small" style="background:#27ae60;color:#fff;" title="Move to Watching" onclick="moveShow(${show.id}, 'watching')">It's back!</button>`;
+          } else if (show.list === 'recommending') {
+            quickBtns = `<button class="btn btn-small" style="background:#27ae60;color:#fff;" title="Move to Watching" onclick="moveShow(${show.id}, 'watching')">Watching again</button>`;
+          } else if (show.list === 'next') {
+            quickBtns = `<button class="btn btn-small" style="background:#27ae60;color:#fff;" title="Move to Watching" onclick="moveShow(${show.id}, 'watching')">Start watching</button>`;
+          }
           actions = `
             <div class="show-actions-inline">
-              <select onchange="moveShow(${show.id}, this.value)">
-                <option value="">Move...</option>
-                <option value="watching" ${show.list === 'watching' ? 'disabled' : ''}>Watching</option>
-                <option value="waiting" ${show.list === 'waiting' ? 'disabled' : ''}>Waiting</option>
-                <option value="recommending" ${show.list === 'recommending' ? 'disabled' : ''}>Recommending</option>
-                <option value="next" ${show.list === 'next' ? 'disabled' : ''}>Up Next</option>
-              </select>
-              <button class="btn btn-small btn-edit" onclick="openEditModal(${show.id})">Edit</button>
-              <button class="btn btn-small btn-archive" onclick="archiveShow(${show.id})">Archive</button>
+              ${quickBtns}
+              <button class="btn btn-small btn-edit" title="Edit this show" onclick="openEditModal(${show.id})">Edit</button>
+              <button class="btn btn-small btn-archive" title="Archive this show" onclick="archiveShow(${show.id})">Archive</button>
             </div>`;
         }
 
         return `
           <div class="show-row">
-            <span class="show-info"><span class="show-title${show.actor_count > 0 ? ' clickable' : ''}" ${show.actor_count > 0 ? `onclick="toggleActors(${show.id})"` : ''}>${show.actor_count > 0 ? `<span class="show-arrow" id="arrow-${show.id}">&#9654;</span>` : ''}${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${series}${network}${nextDate}${from}${watchingWith}${notes}</span>
+            <button class="share-btn" onclick="openShareModal(${show.id})" title="Share to another list">+</button>
+            <span class="show-info"><span class="show-title clickable" onclick="toggleActors(${show.id})">${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${series}${network}${nextDate}${from}${watchingWith}</span>
             ${actions}
           </div>
           <div class="show-actors" id="actors-${show.id}">
@@ -663,42 +972,52 @@
         .sort((a, b) => b[1] - a[1])
         .map(([n, c]) => `${n} (${c})`)
         .join(' &middot; ');
-      const legend = hasFullSeries ? '🎬 = Series Complete' : '';
-      const footer = [legend, countsHtml].filter(Boolean).join(' &middot; ');
-      if (footer) container.innerHTML += `<div class="network-counts">${footer}</div>`;
+      const legendParts = [];
+      if (hasFullSeries) legendParts.push('🎬 Series Complete');
+      legendParts.push('Tap title for details');
+      legendParts.push('+ Suggest to another member');
+      const legend = legendParts.join(' | ');
+      if (legend) container.innerHTML += `<div class="network-counts">${legend}</div>`;
+      if (countsHtml) container.innerHTML += `<div class="network-counts">${countsHtml}</div>`;
+      if (!isEditor) container.innerHTML += `<div class="suggest-bar" style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;"><button class="suggest-btn" onclick="shareList()" style="background: #95a5a6;">Share ${escapeHtml(owners)}'s Shows</button><button class="suggest-btn" onclick="openSuggestModal()">Suggest a Show for ${escapeHtml(owners)}</button></div>`;
 
-      const suggestPill = !isEditor ? `<button class="toggle-pill active" onclick="openSuggestModal()" id="suggestBtn">Suggest a Show</button>` : '';
+      const sortHtml = `<select class="sort-select" onchange="changeSort(this.value)">
+        <option value="rating"${sortOrder === 'rating' ? ' selected' : ''}>Sort by Rating</option>
+        <option value="alpha"${sortOrder === 'alpha' ? ' selected' : ''}>Sort A–Z</option>
+        <option value="added"${sortOrder === 'added' ? ' selected' : ''}>Sort by Date Added</option>
+      </select>`;
+      container.innerHTML += `<div class="toggle-bar">${sortHtml}</div>`;
       const togglesHtml = TOGGLES.map(key => {
         const vis = getVisible(key);
-        return `<button class="toggle-pill${vis ? ' active' : ''}" onclick="toggleVisible('${key}')">${TOGGLE_LABELS[key]}</button>`;
+        return `<button class="toggle-pill${vis ? ' active' : ''}" onclick="toggleVisible('${key}')" title="${vis ? 'Hide' : 'Show'} ${TOGGLE_LABELS[key]}">${TOGGLE_LABELS[key]}</button>`;
       }).join('');
-      container.innerHTML += `<div class="toggle-bar">${suggestPill}${togglesHtml}</div>`;
+      container.innerHTML += `<div class="toggle-bar">${togglesHtml}</div>`;
     }
 
     async function toggleActors(showId) {
       const container = document.getElementById(`actors-${showId}`);
-      const arrow = document.getElementById(`arrow-${showId}`);
       if (container.classList.contains('visible')) {
         container.classList.remove('visible');
-        if (arrow) arrow.classList.remove('expanded');
         return;
       }
       document.querySelectorAll('.show-actors.visible').forEach(el => el.classList.remove('visible'));
-      document.querySelectorAll('.show-arrow.expanded').forEach(el => el.classList.remove('expanded'));
       container.classList.add('visible');
-      if (arrow) arrow.classList.add('expanded');
       const list = document.getElementById(`actors-list-${showId}`);
       if (list.children.length > 0) return;
 
-      list.innerHTML = '<span class="actor-tag">Loading...</span>';
+      list.innerHTML = '<div class="show-detail-line">Loading...</div>';
       try {
+        const show = shows.find(s => s.id === showId);
         const res = await fetch(`/api/shows/${showId}/actors`);
         const data = await res.json();
-        if (data.actors && data.actors.length > 0) {
-          list.innerHTML = data.actors.map(a => `<span class="actor-tag">${escapeHtml(a)}</span>`).join('');
-        } else {
-          list.innerHTML = '<span style="color:#bdc3c7;font-size:12px">No cast info</span>';
+        let html = '';
+        if (show && show.genres) html += `<div class="show-detail-line">${escapeHtml(show.genres)}</div>`;
+        if (data.actors && data.actors.length > 0) html += `<div class="show-detail-line">${data.actors.map(a => escapeHtml(a)).join(', ')}</div>`;
+        if (show && show.notes) {
+          html += `<div class="show-detail-line">${escapeHtml(show.notes)}</div>`;
         }
+        if (!html) html = '<div class="show-detail-line" style="color:#bdc3c7;">No additional info</div>';
+        list.innerHTML = html;
       } catch (e) {
         list.innerHTML = '<span style="color:#e74c3c;font-size:12px">Failed to load</span>';
       }
@@ -706,7 +1025,7 @@
 
     function findOnNetwork() {
       const title = document.getElementById('inputTitle').value.trim();
-      const network = document.getElementById('inputNetwork').value;
+      const network = getNetwork('inputNetwork', 'inputNetworkOther');
       if (!title) { alert('Enter a show title first'); return; }
       if (!network) { alert('Select a network first'); return; }
       const url = buildSearchUrl(network, title);
@@ -719,13 +1038,15 @@
       document.getElementById('modalSave').textContent = 'Add Show';
       document.getElementById('inputTitle').value = '';
       document.getElementById('inputNetwork').value = '';
+      document.getElementById('inputNetworkOther').value = '';
+      document.getElementById('inputNetworkOther').style.display = 'none';
       document.getElementById('inputUrl').value = '';
       document.getElementById('inputRecommended').value = '';
       document.getElementById('inputNotes').value = '';
       document.getElementById('inputWatchingWith').value = '';
       document.getElementById('inputMovie').checked = false;
       document.getElementById('inputFullSeries').checked = false;
-      document.getElementById('inputList').value = currentTab;
+      setSelectedList(currentTab);
       document.getElementById('modalOverlay').classList.remove('hidden');
       document.getElementById('inputTitle').focus();
     }
@@ -737,14 +1058,24 @@
       document.getElementById('modalTitle').textContent = 'Edit Show';
       document.getElementById('modalSave').textContent = 'Save Changes';
       document.getElementById('inputTitle').value = show.title;
-      document.getElementById('inputNetwork').value = show.network || '';
+      const networkSelect = document.getElementById('inputNetwork');
+      const networkOther = document.getElementById('inputNetworkOther');
+      if (show.network && !Array.from(networkSelect.options).some(o => o.value === show.network)) {
+        networkSelect.value = '__other';
+        networkOther.value = show.network;
+        networkOther.style.display = 'block';
+      } else {
+        networkSelect.value = show.network || '';
+        networkOther.value = '';
+        networkOther.style.display = 'none';
+      }
       document.getElementById('inputUrl').value = show.network_url || '';
       document.getElementById('inputRecommended').value = show.recommended_by || '';
       document.getElementById('inputNotes').value = show.notes || '';
       document.getElementById('inputWatchingWith').value = show.watching_with || '';
       document.getElementById('inputMovie').checked = !!show.movie;
       document.getElementById('inputFullSeries').checked = !!show.full_series;
-      document.getElementById('inputList').value = show.list;
+      setSelectedList(show.list);
       document.getElementById('modalOverlay').classList.remove('hidden');
       document.getElementById('inputTitle').focus();
     }
@@ -767,14 +1098,14 @@
 
       const body = {
         title,
-        network: document.getElementById('inputNetwork').value || null,
+        network: getNetwork('inputNetwork', 'inputNetworkOther'),
         network_url: cleanUrl(document.getElementById('inputUrl').value.trim()) || null,
         recommended_by: document.getElementById('inputRecommended').value.trim() || null,
         notes: document.getElementById('inputNotes').value.trim() || null,
         watching_with: document.getElementById('inputWatchingWith').value.trim() || null,
         movie: document.getElementById('inputMovie').checked ? 1 : 0,
         full_series: document.getElementById('inputFullSeries').checked ? 1 : 0,
-        list: document.getElementById('inputList').value,
+        list: getSelectedList(),
       };
 
       try {
@@ -786,7 +1117,7 @@
             body: JSON.stringify(body),
           });
         } else {
-          const checkRes = await fetch(`/api/shows/check?title=${encodeURIComponent(title)}&household=${householdSlug}`);
+          const checkRes = await fetch(`/api/shows/check?title=${encodeURIComponent(title)}&member=${memberSlug}`);
           const check = await checkRes.json();
           if (check.exists) {
             if (check.archived) {
@@ -909,10 +1240,24 @@
       return q[Math.floor(Math.random() * q.length)];
     }
 
+    function shareList() {
+      const url = `https://showpicker.club/${memberSlug}`;
+      const text = `Check out ${owners}'s show list on Show Picker Club: ${url}`;
+      if (navigator.share) {
+        navigator.share({ title: `${owners}'s Shows`, text, url }).catch(() => {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => alert('Link copied to clipboard!')).catch(() => alert(text));
+      } else {
+        alert(text);
+      }
+    }
+
     function openSuggestModal() {
       document.getElementById('suggestName').value = '';
       document.getElementById('suggestTitle').value = '';
       document.getElementById('suggestNetwork').value = '';
+      document.getElementById('suggestNetworkOther').value = '';
+      document.getElementById('suggestNetworkOther').style.display = 'none';
       document.getElementById('suggestNotes').value = '';
       document.getElementById('suggestOverlay').classList.remove('hidden');
       document.getElementById('suggestName').focus();
@@ -926,7 +1271,7 @@
     async function submitSuggestion() {
       const name = document.getElementById('suggestName').value.trim();
       const title = document.getElementById('suggestTitle').value.trim();
-      const network = document.getElementById('suggestNetwork').value || null;
+      const network = getNetwork('suggestNetwork', 'suggestNetworkOther');
       const notes = document.getElementById('suggestNotes').value.trim() || null;
       if (!title) { alert('Show title is required'); return; }
       if (!name) { alert('Your name is required'); return; }
@@ -935,7 +1280,7 @@
         const res = await fetch('/api/suggestions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, network, recommended_by: name, notes, movie: document.getElementById('suggestMovie').checked ? 1 : 0, full_series: document.getElementById('suggestFullSeries').checked ? 1 : 0, household: householdSlug }),
+          body: JSON.stringify({ title, network, recommended_by: name, notes, movie: document.getElementById('suggestMovie').checked ? 1 : 0, full_series: document.getElementById('suggestFullSeries').checked ? 1 : 0, member: memberSlug }),
         });
         const data = await res.json();
         if (data.duplicate) {
@@ -957,10 +1302,198 @@
       }
     }
 
+    let allMembers = [];
+
+    async function loadMembers() {
+      if (allMembers.length > 0) return;
+      try {
+        const res = await fetch('/api/members');
+        const data = await res.json();
+        allMembers = data.members || [];
+      } catch (e) {}
+    }
+
+    let popularShowData = null;
+
+    async function openPopularShare(title, network, networkUrl, movie) {
+      await loadMembers();
+      popularShowData = { title, network, network_url: networkUrl, movie };
+      document.getElementById('shareShowId').value = '';
+      document.getElementById('shareTitle').value = title;
+      document.getElementById('shareNotes').value = '';
+      document.getElementById('shareName').value = editorName;
+
+      const select = document.getElementById('shareMember');
+      select.innerHTML = allMembers
+        .map(h => `<option value="${h.slug}">${h.name}</option>`)
+        .join('');
+
+      document.getElementById('shareOverlay').classList.remove('hidden');
+      document.getElementById('shareName').focus();
+    }
+
+    async function openShareModal(showId) {
+      await loadMembers();
+      const show = shows.find(s => s.id === showId);
+      if (!show) return;
+      document.getElementById('shareShowId').value = showId;
+      document.getElementById('shareTitle').value = show.title;
+      document.getElementById('shareNotes').value = '';
+      document.getElementById('shareName').value = editorName;
+
+      const select = document.getElementById('shareMember');
+      select.innerHTML = allMembers
+        .filter(h => h.slug !== memberSlug)
+        .map(h => `<option value="${h.slug}">${h.name}</option>`)
+        .join('');
+
+      document.getElementById('shareOverlay').classList.remove('hidden');
+      document.getElementById('shareName').focus();
+    }
+
+    function closeShareModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('shareOverlay').classList.add('hidden');
+    }
+
+    async function submitShare() {
+      const showId = document.getElementById('shareShowId').value;
+      const targetMember = document.getElementById('shareMember').value;
+      const name = document.getElementById('shareName').value.trim();
+      const notes = document.getElementById('shareNotes').value.trim() || null;
+
+      if (!name) { alert('Your name is required'); return; }
+      if (!targetMember) { alert('Please select a member'); return; }
+
+      try {
+        let res, data;
+        if (popularShowData && !showId) {
+          // Adding from popular list — use suggestion endpoint
+          res = await fetch('/api/suggestions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: popularShowData.title,
+              network: popularShowData.network || null,
+              recommended_by: name,
+              notes,
+              movie: popularShowData.movie || 0,
+              full_series: 0,
+              member: targetMember,
+            }),
+          });
+          data = await res.json();
+          popularShowData = null;
+        } else {
+          // Sharing from a member list
+          res = await fetch('/api/shows/share', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              show_id: parseInt(showId),
+              source_member: memberSlug,
+              target_member: targetMember,
+              recommended_by: name,
+              notes,
+            }),
+          });
+          data = await res.json();
+        }
+        if (data.duplicate) {
+          closeShareModal();
+          if (data.archived) {
+            alert('They had this one but archived it — they must not be fans!');
+          } else {
+            alert(`They already have this on their "${data.list}" list!`);
+          }
+        } else if (data.success) {
+          closeShareModal();
+          const target = allMembers.find(h => h.slug === targetMember);
+          alert(`Added to ${target ? target.name : 'their'} Up Next list!`);
+        } else {
+          alert(data.error || 'Failed to share');
+        }
+      } catch (e) {
+        alert('Failed to share');
+      }
+    }
+
     function formatDate(dateStr) {
       if (!dateStr) return '';
       const [y, m, d] = dateStr.split('-');
       return `${parseInt(m)}/${parseInt(d)}`;
+    }
+
+    let addMyListData = null;
+
+    function openAddMyList(title, network, networkUrl, movie) {
+      addMyListData = { title, network, network_url: networkUrl, movie };
+      document.getElementById('addMyTitle').value = title;
+      document.getElementById('addMyList').value = 'watching';
+      document.getElementById('addMyNotes').value = '';
+      document.getElementById('addMyListOverlay').classList.remove('hidden');
+    }
+
+    function closeAddMyList(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('addMyListOverlay').classList.add('hidden');
+    }
+
+    async function submitAddMyList() {
+      if (!authMember || !addMyListData) return;
+      const list = document.getElementById('addMyList').value;
+      const notes = document.getElementById('addMyNotes').value.trim() || null;
+
+      try {
+        const res = await fetch('/api/shows', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: addMyListData.title,
+            network: addMyListData.network || null,
+            network_url: addMyListData.network_url || null,
+            notes,
+            movie: addMyListData.movie || 0,
+            full_series: 0,
+            list,
+          }),
+        });
+        const data = await res.json();
+        if (res.status === 409) {
+          closeAddMyList();
+          alert(data.error === 'exists_archived' ? 'You had this one but archived it.' : `Already on your "${data.list}" list!`);
+        } else if (data.show) {
+          closeAddMyList();
+          alert(`Added to your ${list} list!`);
+        } else {
+          alert(data.error || 'Failed to add');
+        }
+      } catch (e) {
+        alert('Failed to add');
+      }
+    }
+
+    function togglePopular(expand) {
+      document.querySelectorAll('.popular-row').forEach((r, i) => {
+        if (i >= 5) r.style.display = expand ? '' : 'none';
+      });
+      document.getElementById('popularToggle').innerHTML = expand
+        ? `<button onclick="togglePopular(false)" style="background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">Less &#9650;</button>`
+        : `<button onclick="togglePopular(true)" style="background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">More &#9660;</button>`;
+    }
+
+    function timeAgo(dateStr) {
+      const now = new Date();
+      const then = new Date(dateStr + 'Z');
+      const mins = Math.floor((now - then) / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      if (days === 1) return 'yesterday';
+      if (days < 7) return `${days}d ago`;
+      return `${Math.floor(days / 7)}w ago`;
     }
 
     function escapeHtml(str) {
@@ -971,7 +1504,7 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeModal(); closeSuggestModal(); }
+      if (e.key === 'Escape') { closeModal(); closeSuggestModal(); closeShareModal(); closeAddMyList(); }
     });
   </script>
 </body>

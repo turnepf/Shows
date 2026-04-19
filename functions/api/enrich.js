@@ -1,16 +1,25 @@
+// Networks with `param` pass the show name in the search URL query string.
+// Networks without `param` just link to the search page (no show name).
 const NETWORK_SEARCH = {
-  'Netflix': { base: 'https://www.netflix.com/search' },
+  // These pass the show name in the search query:
   'HBO': { base: 'https://play.max.com/search', param: 'q' },
   'Apple TV': { base: 'https://tv.apple.com/search', param: 'term' },
+  'Amazon': { base: 'https://www.amazon.com/s', param: 'k', extra: 'i=instant-video' },
+  'Starz': { base: 'https://www.starz.com/search', param: 'q' },
+  'Showtime': { base: 'https://www.sho.com/search', param: 'q' },
+  // These just link to the search page (no query param support):
+  'Netflix': { base: 'https://www.netflix.com/search' },
   'Hulu': { base: 'https://www.hulu.com/search' },
   'Paramount': { base: 'https://www.paramountplus.com/search' },
   'Peacock': { base: 'https://www.peacocktv.com/watch/search' },
-  'Amazon': { base: 'https://www.amazon.com/s', param: 'k', extra: 'i=instant-video' },
   'Bravo': { base: 'https://www.peacocktv.com/watch/search' },
   'Disney+': { base: 'https://www.disneyplus.com/search' },
   'NBC': { base: 'https://www.nbc.com/search' },
-  'Starz': { base: 'https://www.starz.com/search', param: 'q' },
-  'Showtime': { base: 'https://www.sho.com/search', param: 'q' },
+  'CBS': { base: 'https://www.cbs.com/shows/' },
+  'USA': { base: 'https://www.peacocktv.com/watch/search' },
+  'National Geographic': { base: 'https://www.nationalgeographic.com/tv/shows' },
+  'Food Network': { base: 'https://www.foodnetwork.com/search', param: 'q' },
+  'Fox': { base: 'https://www.fox.com/search' },
 };
 
 function generateSearchUrl(network, title) {
@@ -99,7 +108,7 @@ export async function onRequestGet(context) {
   }
 
   const url = new URL(request.url);
-  const household = url.searchParams.get('household');
+  const member = url.searchParams.get('member');
 
   // Find up to 5 shows missing rating or actors or URL
   let query = `SELECT s.id, s.title, s.network, s.network_url
@@ -108,7 +117,7 @@ export async function onRequestGet(context) {
        AND (s.rating IS NULL
          OR s.network_url IS NULL
          OR NOT EXISTS (SELECT 1 FROM actors a WHERE a.show_id = s.id))`;
-  if (household) query += ` AND s.household_slug = '${household}'`;
+  if (member) query += ` AND s.member_slug = '${member}'`;
 
   const { results: needsRating } = await env.DB.prepare(query).all();
 
@@ -173,7 +182,7 @@ export async function onRequestGet(context) {
   if (tmdbKey) {
     let tmdbQuery = `SELECT id, title, movie, list FROM shows
        WHERE archived = 0 AND movie = 0`;
-    if (household) tmdbQuery += ` AND household_slug = '${household}'`;
+    if (member) tmdbQuery += ` AND member_slug = '${member}'`;
 
     const { results: tmdbShows } = await env.DB.prepare(tmdbQuery).all();
 
@@ -191,6 +200,9 @@ export async function onRequestGet(context) {
         // Check if series is complete
         const status = detail.status;
         const isComplete = (status === 'Ended' || status === 'Canceled') ? 1 : 0;
+
+        // Extract genres
+        const genres = (detail.genres || []).map(g => g.name).join(', ') || null;
 
         // Only get dates for watching/waiting lists
         let newDate = null;
@@ -213,8 +225,8 @@ export async function onRequestGet(context) {
         }
 
         await env.DB.prepare(
-          "UPDATE shows SET next_season_date = ?, season_end_date = ?, full_series = ?, updated_at = datetime('now') WHERE id = ?"
-        ).bind(newDate, endDate, isComplete, show.id).run();
+          "UPDATE shows SET next_season_date = ?, season_end_date = ?, full_series = ?, genres = COALESCE(?, genres), updated_at = datetime('now') WHERE id = ?"
+        ).bind(newDate, endDate, isComplete, genres, show.id).run();
         tmdbUpdated++;
       } catch (e) {}
     }

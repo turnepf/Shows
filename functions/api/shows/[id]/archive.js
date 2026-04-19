@@ -8,7 +8,7 @@ async function getSession(request, env) {
   if (!match) return null;
   try {
     const session = await env.DB.prepare(
-      'SELECT email, household_slug, expires_at FROM sessions WHERE id = ?'
+      'SELECT email, member_slug, expires_at FROM sessions WHERE id = ?'
     ).bind(match[1]).first();
     if (session && new Date(session.expires_at) > new Date()) return session;
   } catch (e) {}
@@ -23,8 +23,8 @@ export async function onRequestPut(context) {
   }
 
   await env.DB.prepare(
-    "UPDATE shows SET archived = 1, updated_at = datetime('now') WHERE id = ? AND household_slug = ?"
-  ).bind(params.id, session.household_slug).run();
+    "UPDATE shows SET archived = 1, updated_at = datetime('now') WHERE id = ? AND member_slug = ?"
+  ).bind(params.id, session.member_slug).run();
 
   return new Response(JSON.stringify({ success: true }), { headers: corsHeaders() });
 }

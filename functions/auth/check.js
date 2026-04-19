@@ -10,7 +10,7 @@ export async function onRequestGet(context) {
   }
 
   const session = await env.DB.prepare(
-    'SELECT email, household_slug, expires_at FROM sessions WHERE id = ?'
+    'SELECT email, member_slug, expires_at FROM sessions WHERE id = ?'
   ).bind(match[1]).first();
 
   if (!session || new Date(session.expires_at) < new Date()) {
@@ -22,7 +22,7 @@ export async function onRequestGet(context) {
   return new Response(JSON.stringify({
     authenticated: true,
     email: session.email,
-    household: session.household_slug,
+    member: session.member_slug,
   }), {
     headers: { 'Content-Type': 'application/json' },
   });

@@ -1,12 +1,12 @@
-CREATE TABLE IF NOT EXISTS households (
+CREATE TABLE IF NOT EXISTS members (
   slug TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS household_codes (
+CREATE TABLE IF NOT EXISTS member_codes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  household_slug TEXT REFERENCES households(slug),
+  member_slug TEXT REFERENCES members(slug),
   code TEXT NOT NULL,
   editor_name TEXT NOT NULL
 );
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS shows (
   next_season_date TEXT,
   season_end_date TEXT,
   archived INTEGER DEFAULT 0,
-  household_slug TEXT REFERENCES households(slug),
+  member_slug TEXT REFERENCES members(slug),
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -40,13 +40,13 @@ CREATE TABLE IF NOT EXISTS actors (
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   email TEXT NOT NULL,
-  household_slug TEXT,
+  member_slug TEXT,
   expires_at TEXT NOT NULL,
   created_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_shows_list ON shows(list);
 CREATE INDEX IF NOT EXISTS idx_shows_archived ON shows(archived);
-CREATE INDEX IF NOT EXISTS idx_shows_household ON shows(household_slug);
+CREATE INDEX IF NOT EXISTS idx_shows_member ON shows(member_slug);
 CREATE INDEX IF NOT EXISTS idx_actors_show_id ON actors(show_id);
-CREATE INDEX IF NOT EXISTS idx_household_codes_code ON household_codes(code);
+CREATE INDEX IF NOT EXISTS idx_member_codes_code ON member_codes(code);

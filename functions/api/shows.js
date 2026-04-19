@@ -41,7 +41,7 @@ async function getSession(request, env) {
   if (!match) return null;
   try {
     const session = await env.DB.prepare(
-      'SELECT email, household_slug, expires_at FROM sessions WHERE id = ?'
+      'SELECT email, member_slug, expires_at FROM sessions WHERE id = ?'
     ).bind(match[1]).first();
     if (session && new Date(session.expires_at) > new Date()) return session;
   } catch (e) {}
@@ -106,15 +106,43 @@ async function fetchOMDB(title, env) {
 export async function onRequestGet(context) {
   const { env, request } = context;
   const url = new URL(request.url);
-  const household = url.searchParams.get('household');
-  if (!household) {
-    return new Response(JSON.stringify({ error: 'household required' }), { status: 400, headers: corsHeaders() });
+  const member = url.searchParams.get('member');
+  if (!member) {
+    return new Response(JSON.stringify({ error: 'member required' }), { status: 400, headers: corsHeaders() });
   }
   const { results } = await env.DB.prepare(
     `SELECT s.*, (SELECT COUNT(*) FROM actors a WHERE a.show_id = s.id) as actor_count
-     FROM shows s WHERE s.archived = 0 AND s.household_slug = ? ORDER BY s.title COLLATE NOCASE`
-  ).bind(household).all();
+     FROM shows s WHERE s.archived = 0 AND s.member_slug = ? ORDER BY s.title COLLATE NOCASE`
+  ).bind(member).all();
   return new Response(JSON.stringify({ shows: results }), { headers: corsHeaders() });
+}
+
+async function backfillFromOtherMembers(env, showId, title) {
+  // Check if this show exists on another member with a network/URL we can copy
+  const match = await env.DB.prepare(
+    `SELECT network, network_url FROM shows
+     WHERE LOWER(title) = LOWER(?) AND archived = 0
+       AND id != ?
+       AND network IS NOT NULL
+       AND network_url IS NOT NULL
+       AND network_url NOT LIKE '%/search%'
+       AND network_url NOT LIKE '%/s?%'
+     LIMIT 1`
+  ).bind(title, showId).first();
+
+  if (match) {
+    const show = await env.DB.prepare('SELECT network, network_url FROM shows WHERE id = ?').bind(showId).first();
+    const updates = [];
+    if (!show.network && match.network) updates.push({ field: 'network', value: match.network });
+    if (!show.network_url && match.network_url) updates.push({ field: 'network_url', value: match.network_url });
+    if (updates.length > 0) {
+      const sets = updates.map(u => `${u.field} = ?`).join(', ');
+      const values = updates.map(u => u.value);
+      await env.DB.prepare(
+        `UPDATE shows SET ${sets}, updated_at = datetime('now') WHERE id = ?`
+      ).bind(...values, showId).run();
+    }
+  }
 }
 
 export async function onRequestPost(context) {
@@ -134,8 +162,8 @@ export async function onRequestPost(context) {
   const finalTitle = omdb.canonicalTitle || title;
 
   const existing = await env.DB.prepare(
-    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?) AND household_slug = ?'
-  ).bind(finalTitle, session.household_slug).first();
+    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?) AND member_slug = ?'
+  ).bind(finalTitle, session.member_slug).first();
   if (existing) {
     if (existing.archived) {
       return new Response(JSON.stringify({ error: 'exists_archived', id: existing.id, title: finalTitle }), { status: 409, headers: corsHeaders() });
@@ -146,13 +174,18 @@ export async function onRequestPost(context) {
   const url = cleanUrl(network_url) || generateNetworkUrl(network, finalTitle);
 
   const result = await env.DB.prepare(
-    'INSERT INTO shows (title, network, network_url, recommended_by, rating, list, notes, movie, full_series, watching_with, household_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(finalTitle, network || null, url, recommended_by || null, omdb.rating, list, notes || null, movie || 0, full_series || 0, watching_with || null, session.household_slug).run();
+    'INSERT INTO shows (title, network, network_url, recommended_by, rating, list, notes, movie, full_series, watching_with, member_slug, added_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(finalTitle, network || null, url, recommended_by || null, omdb.rating, list, notes || null, movie || 0, full_series || 0, watching_with || null, session.member_slug, session.email).run();
 
   const showId = result.meta.last_row_id;
   if (omdb.actors.length > 0) {
     const stmt = env.DB.prepare('INSERT INTO actors (show_id, name) VALUES (?, ?)');
     await env.DB.batch(omdb.actors.map(actor => stmt.bind(showId, actor)));
+  }
+
+  // Backfill network/URL from other members if missing
+  if (!network || !network_url) {
+    await backfillFromOtherMembers(env, showId, finalTitle);
   }
 
   const show = await env.DB.prepare('SELECT * FROM shows WHERE id = ?').bind(showId).first();

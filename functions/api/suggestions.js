@@ -60,16 +60,16 @@ async function fetchOMDB(title, env) {
 export async function onRequestPost(context) {
   const { env, request } = context;
   const body = await request.json();
-  const { title, network, recommended_by, notes, movie, full_series, household } = body;
+  const { title, network, recommended_by, notes, movie, full_series, member } = body;
 
-  if (!title || !household) {
-    return new Response(JSON.stringify({ error: 'Title and household are required' }), { status: 400, headers: corsHeaders() });
+  if (!title || !member) {
+    return new Response(JSON.stringify({ error: 'Title and member are required' }), { status: 400, headers: corsHeaders() });
   }
 
   // Check for existing show (including archived)
   const existing = await env.DB.prepare(
-    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?) AND household_slug = ?'
-  ).bind(title, household).first();
+    'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?) AND member_slug = ?'
+  ).bind(title, member).first();
 
   if (existing) {
     if (existing.archived) {
@@ -84,8 +84,8 @@ export async function onRequestPost(context) {
   // Check again with canonical title
   if (finalTitle.toLowerCase() !== title.toLowerCase()) {
     const dupeCheck = await env.DB.prepare(
-      'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?) AND household_slug = ?'
-    ).bind(finalTitle, household).first();
+      'SELECT id, list, archived FROM shows WHERE LOWER(title) = LOWER(?) AND member_slug = ?'
+    ).bind(finalTitle, member).first();
     if (dupeCheck) {
       if (dupeCheck.archived) {
         return new Response(JSON.stringify({ duplicate: true, archived: true }), { headers: corsHeaders() });
@@ -97,13 +97,32 @@ export async function onRequestPost(context) {
   const suggestionNote = notes ? `Suggested · ${notes}` : 'Suggested';
 
   const result = await env.DB.prepare(
-    'INSERT INTO shows (title, network, recommended_by, rating, list, notes, movie, full_series, household_slug) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(finalTitle, network || null, recommended_by || null, omdb.rating, 'next', suggestionNote, movie || 0, full_series || 0, household).run();
+    'INSERT INTO shows (title, network, recommended_by, rating, list, notes, movie, full_series, member_slug, added_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(finalTitle, network || null, recommended_by || null, omdb.rating, 'next', suggestionNote, movie || 0, full_series || 0, member, recommended_by || 'Anonymous').run();
 
   const showId = result.meta.last_row_id;
   if (omdb.actors.length > 0) {
     const stmt = env.DB.prepare('INSERT INTO actors (show_id, name) VALUES (?, ?)');
     await env.DB.batch(omdb.actors.map(actor => stmt.bind(showId, actor)));
+  }
+
+  // Backfill network/URL from other members if missing
+  if (!network) {
+    const match = await env.DB.prepare(
+      `SELECT network, network_url FROM shows
+       WHERE LOWER(title) = LOWER(?) AND archived = 0
+         AND id != ?
+         AND network IS NOT NULL
+         AND network_url IS NOT NULL
+         AND network_url NOT LIKE '%/search%'
+         AND network_url NOT LIKE '%/s?%'
+       LIMIT 1`
+    ).bind(finalTitle, showId).first();
+    if (match) {
+      await env.DB.prepare(
+        "UPDATE shows SET network = ?, network_url = ?, updated_at = datetime('now') WHERE id = ?"
+      ).bind(match.network, match.network_url, showId).run();
+    }
   }
 
   return new Response(JSON.stringify({ success: true }), { status: 201, headers: corsHeaders() });
