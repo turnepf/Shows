@@ -13,7 +13,7 @@ const NETWORK_SEARCH = {
   'Paramount': { base: 'https://www.paramountplus.com/search' },
   'Peacock': { base: 'https://www.peacocktv.com/watch/search' },
   'Bravo': { base: 'https://www.peacocktv.com/watch/search' },
-  'Disney+': { base: 'https://www.disneyplus.com/search' },
+  'Disney+': { base: 'https://www.disneyplus.com/browse/search' },
   'NBC': { base: 'https://www.nbc.com/search' },
   'CBS': { base: 'https://www.cbs.com/shows/' },
   'USA': { base: 'https://www.peacocktv.com/watch/search' },
@@ -135,20 +135,20 @@ export async function onRequestGet(context) {
       if (dupe) {
         // Duplicate — archive this one instead of renaming
         await env.DB.prepare(
-          "UPDATE shows SET archived = 1, updated_at = datetime('now') WHERE id = ?"
+          "UPDATE shows SET archived = 1, enriched_at = datetime('now') WHERE id = ?"
         ).bind(show.id).run();
         enriched++;
         continue;
       }
       await env.DB.prepare(
-        "UPDATE shows SET title = ?, updated_at = datetime('now') WHERE id = ?"
+        "UPDATE shows SET title = ?, enriched_at = datetime('now') WHERE id = ?"
       ).bind(omdb.canonicalTitle, show.id).run();
     }
 
     // Update rating if missing
     if (omdb.rating) {
       await env.DB.prepare(
-        "UPDATE shows SET rating = ?, updated_at = datetime('now') WHERE id = ? AND rating IS NULL"
+        "UPDATE shows SET rating = ?, enriched_at = datetime('now') WHERE id = ? AND rating IS NULL"
       ).bind(omdb.rating, show.id).run();
     }
 
@@ -168,7 +168,7 @@ export async function onRequestGet(context) {
       const searchUrl = generateSearchUrl(show.network, show.title);
       if (searchUrl) {
         await env.DB.prepare(
-          "UPDATE shows SET network_url = ?, updated_at = datetime('now') WHERE id = ?"
+          "UPDATE shows SET network_url = ?, enriched_at = datetime('now') WHERE id = ?"
         ).bind(searchUrl, show.id).run();
       }
     }
@@ -225,7 +225,7 @@ export async function onRequestGet(context) {
         }
 
         await env.DB.prepare(
-          "UPDATE shows SET next_season_date = ?, season_end_date = ?, full_series = ?, genres = COALESCE(?, genres), updated_at = datetime('now') WHERE id = ?"
+          "UPDATE shows SET next_season_date = ?, season_end_date = ?, full_series = ?, genres = COALESCE(?, genres), enriched_at = datetime('now') WHERE id = ?"
         ).bind(newDate, endDate, isComplete, genres, show.id).run();
         tmdbUpdated++;
       } catch (e) {}

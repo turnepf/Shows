@@ -254,22 +254,21 @@
     .landing { max-width: 500px; margin: 60px auto; padding: 0 20px; text-align: center; }
     .landing h1 { font-size: 28px; color: #2C3E50; margin-bottom: 8px; }
     .landing p { color: #7f8c8d; margin-bottom: 30px; }
-    .member-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    @media (min-width: 480px) { .member-list { grid-template-columns: 1fr 1fr 1fr; } }
+    .member-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 12px; }
+    @media (min-width: 480px) { .member-list { grid-template-columns: repeat(4, 1fr); } }
     .member-card {
       display: block;
-      background: #fff;
-      border: 1px solid #e8e0d4;
-      border-radius: 8px;
-      padding: 10px 14px;
-      text-decoration: none;
+      padding: 6px 4px;
+      text-align: left;
+      text-decoration: underline;
+      text-decoration-color: #bdc3c7;
+      text-underline-offset: 2px;
       color: #2C3E50;
       font-size: 14px;
       font-weight: 600;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-      transition: box-shadow 0.2s, transform 0.2s;
+      transition: color 0.2s;
     }
-    .member-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.1); transform: translateY(-1px); }
+    .member-card:hover { color: #E67E22; text-decoration-color: #E67E22; }
 
     /* Modal */
     .modal-overlay {
@@ -353,6 +352,7 @@
   <div id="landingPage" class="hidden">
     <div class="landing">
       <h1>Show Picker Club</h1>
+      <a id="myShowsLink" href="#" class="member-card hidden" style="display: inline-block; margin: 4px auto 20px;">My Shows &rarr;</a>
       <div id="popularSection" id="popular" style="margin-top: 8px; margin-bottom: 24px; display: none;">
         <h3 id="popular" style="font-size: 15px; color: #2C3E50; margin-bottom: 8px; text-align: center;">What Members Are Watching</h3>
         <div id="popularList" class="show-list" style="text-align: left;"></div>
@@ -365,8 +365,10 @@
 
       <h3 id="whats-new" style="font-size: 15px; color: #2C3E50; margin-bottom: 8px; margin-top: 24px; text-align: center;">What's New</h3>
       <div style="padding: 16px 24px; background: #f0ebe3; border-radius: 10px; font-size: 13px; color: #555; line-height: 1.8; text-align: left;">
+        <strong>4/21</strong> &mdash; <strong>My Shows link.</strong> When logged in, a quick "My Shows" link appears on the home page just below the title.<br>
         <strong>4/17</strong> &mdash; <strong>Quick actions.</strong> On the Watching list, "Watched it" moves a show to Recommending and "Season done" moves it to Waiting &mdash; no dropdown needed.<br>
         <strong>4/17</strong> &mdash; <strong>Genre tags.</strong> Shows now display genre info (Drama, Comedy, Thriller, etc.) pulled from TMDB. Toggle visibility with the Genres pill.<br>
+        <span id="whatsnewExtra" style="display: none;">
         <strong>4/17</strong> &mdash; <strong>Share this list.</strong> Share a member's list with friends via text, email, or clipboard.<br>
         <strong>4/16</strong> &mdash; <strong>What Members Are Watching.</strong> The home page now shows the most popular shows across all members. Tap <strong>+</strong> to add any of them to your own list.<br>
         <strong>4/15</strong> &mdash; <strong>New domain!</strong> Show Picker Club is now at <a href="https://showpicker.club" style="color: #E67E22; font-weight: 600;">showpicker.club</a>. The old link still works too.<br>
@@ -383,6 +385,12 @@
         <strong>4/13</strong> &mdash; <strong>Multi-member support.</strong> One app, multiple members &mdash; each with their own lists and login codes.<br>
         <strong>4/13</strong> &mdash; <strong>PWA support.</strong> Add Show Picker Club to your phone's home screen for an app-like experience.<br>
         <strong>4/12</strong> &mdash; <strong>Initial launch.</strong> Add, edit, move, and archive shows across four lists: Watching, Waiting, Recommending, and Up Next. Auto-enriched with IMDB ratings, actors, and network links.
+        </span>
+        <div id="whatsnewToggle" style="text-align: center; padding: 8px 0;"><button onclick="toggleWhatsNew(true)" style="background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">More &#9660;</button></div>
+      </div>
+
+      <div style="text-align: center; margin-top: 24px;">
+        <a href="/reporting" style="color: #95a5a6; font-size: 13px; text-decoration: none; font-style: italic;">Curious?</a>
       </div>
 
       <footer style="padding: 24px 0 20px; font-size: 12px; color: #95a5a6; text-align: center;">
@@ -686,7 +694,7 @@
         const data = await res.json();
         const list = document.getElementById('memberList');
         list.innerHTML = data.members.map(h =>
-          `<a class="member-card" href="/${h.slug}">${escapeHtml(h.name.split(' ')[0])}</a>`
+          `<a class="member-card" href="/${h.slug}">${escapeHtml(h.display_name || h.first_name || h.name.split(' ')[0])}</a>`
         ).join('');
       } catch (e) {
         document.getElementById('memberList').innerHTML = '<p>Failed to load.</p>';
@@ -736,8 +744,9 @@
         const data = await res.json();
         const h = data.members.find(h => h.slug === slug);
         if (h) {
-          owners = h.name.split(' ')[0];
-          memberName = `${owners}'s Shows`;
+          owners = h.first_name || h.name.split(' ')[0];
+          const label = h.display_name || owners;
+          memberName = `${label}'s Shows`;
         } else {
           memberName = 'Shows';
           owners = 'the owners';
@@ -789,6 +798,12 @@
           authMember = data.member;
           // Show + buttons on popular list if on landing page
           document.querySelectorAll('.popular-add-btn').forEach(b => b.style.display = '');
+          // Show "My Shows" link on landing page
+          const myShowsLink = document.getElementById('myShowsLink');
+          if (myShowsLink && authMember) {
+            myShowsLink.href = `/${authMember}`;
+            myShowsLink.classList.remove('hidden');
+          }
           // Don't auto-enter edit mode; wait for user to click Edit
         }
       } catch (e) {}
@@ -1325,7 +1340,7 @@
 
       const select = document.getElementById('shareMember');
       select.innerHTML = allMembers
-        .map(h => `<option value="${h.slug}">${h.name}</option>`)
+        .map(h => `<option value="${h.slug}">${escapeHtml((h.display_name || h.first_name || h.name.split(' ')[0]) + "'s Shows")}</option>`)
         .join('');
 
       document.getElementById('shareOverlay').classList.remove('hidden');
@@ -1344,7 +1359,7 @@
       const select = document.getElementById('shareMember');
       select.innerHTML = allMembers
         .filter(h => h.slug !== memberSlug)
-        .map(h => `<option value="${h.slug}">${h.name}</option>`)
+        .map(h => `<option value="${h.slug}">${escapeHtml((h.display_name || h.first_name || h.name.split(' ')[0]) + "'s Shows")}</option>`)
         .join('');
 
       document.getElementById('shareOverlay').classList.remove('hidden');
@@ -1409,7 +1424,7 @@
         } else if (data.success) {
           closeShareModal();
           const target = allMembers.find(h => h.slug === targetMember);
-          alert(`Added to ${target ? target.name : 'their'} Up Next list!`);
+          alert(`Added to ${target ? (target.display_name || target.first_name || target.name.split(' ')[0]) + "'s Shows" : 'their'} Up Next list!`);
         } else {
           alert(data.error || 'Failed to share');
         }
@@ -1480,6 +1495,13 @@
       document.getElementById('popularToggle').innerHTML = expand
         ? `<button onclick="togglePopular(false)" style="background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">Less &#9650;</button>`
         : `<button onclick="togglePopular(true)" style="background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">More &#9660;</button>`;
+    }
+
+    function toggleWhatsNew(expand) {
+      document.getElementById('whatsnewExtra').style.display = expand ? 'inline' : 'none';
+      document.getElementById('whatsnewToggle').innerHTML = expand
+        ? `<button onclick="toggleWhatsNew(false)" style="background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">Less &#9650;</button>`
+        : `<button onclick="toggleWhatsNew(true)" style="background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">More &#9660;</button>`;
     }
 
     function timeAgo(dateStr) {

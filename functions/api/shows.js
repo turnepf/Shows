@@ -7,7 +7,7 @@ const NETWORK_SEARCH = {
   'Peacock': { base: 'https://www.peacocktv.com/watch/search' },
   'Amazon': { base: 'https://www.amazon.com/s', param: 'k', extra: 'i=instant-video' },
   'Bravo': { base: 'https://www.peacocktv.com/watch/search' },
-  'Disney+': { base: 'https://www.disneyplus.com/search' },
+  'Disney+': { base: 'https://www.disneyplus.com/browse/search' },
   'NBC': { base: 'https://www.nbc.com/search' },
   'Starz': { base: 'https://www.starz.com/search', param: 'q' },
   'Showtime': { base: 'https://www.sho.com/search', param: 'q' },

@@ -27,8 +27,8 @@ export async function onRequestGet(context) {
   const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   await env.DB.prepare(
-    'INSERT INTO sessions (id, email, member_slug, expires_at) VALUES (?, ?, ?, ?)'
-  ).bind(sessionId, match.editor_name, match.member_slug, sessionExpires.toISOString()).run();
+    'INSERT INTO sessions (id, email, member_slug, expires_at, created_at) VALUES (?, ?, ?, ?, ?)'
+  ).bind(sessionId, match.editor_name, match.member_slug, sessionExpires.toISOString(), new Date().toISOString()).run();
 
   return new Response(null, {
     status: 302,

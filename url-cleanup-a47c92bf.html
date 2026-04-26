@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>URL Cleanup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #FBF5EB;
+      color: #2C2C2C;
+      min-height: 100vh;
+      padding: 32px 16px 80px;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 22px; color: #2C3E50; margin-bottom: 4px; }
+    .remaining { font-size: 13px; color: #888; margin-bottom: 20px; }
+
+    .login {
+      background: #fff;
+      padding: 24px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      max-width: 380px;
+      margin: 0 auto;
+    }
+    .login label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #555; }
+    .login input {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid #ddd; border-radius: 6px;
+      font-size: 15px; font-family: inherit;
+    }
+    .login input:focus { outline: none; border-color: #E67E22; }
+    .login button {
+      width: 100%; margin-top: 16px; padding: 12px;
+      background: #E67E22; color: #fff; border: none; border-radius: 6px;
+      font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    .login button:hover { background: #d35400; }
+
+    .row {
+      background: #fff;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: opacity 0.25s, transform 0.25s;
+    }
+    .row.removing { opacity: 0; transform: translateX(20px); }
+
+    .row-head {
+      display: flex; align-items: baseline; gap: 8px;
+      flex-wrap: wrap; margin-bottom: 10px;
+    }
+    .show-link {
+      font-size: 16px; font-weight: 600; color: #2C3E50;
+      text-decoration: underline; text-decoration-color: #bdc3c7;
+      text-underline-offset: 3px;
+    }
+    .show-link:hover { color: #E67E22; text-decoration-color: #E67E22; }
+    .show-meta { font-size: 12px; color: #888; }
+    .current-url {
+      font-size: 11px; color: #b71c1c;
+      width: 100%; word-break: break-all; margin-top: 2px;
+    }
+
+    .row-form {
+      display: grid;
+      grid-template-columns: minmax(140px, 180px) 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .row-form select, .row-form input {
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      min-width: 0;
+    }
+    .row-form select:focus, .row-form input:focus { outline: none; border-color: #E67E22; }
+    .row-form .other-input { display: none; grid-column: 1 / -1; margin-top: 4px; }
+    .row-form .other-input.show { display: block; }
+    .btn-update {
+      padding: 8px 14px;
+      background: #E67E22; color: #fff;
+      border: none; border-radius: 5px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn-update:hover { background: #d35400; }
+    .btn-update:disabled { background: #bbb; cursor: not-allowed; }
+
+    .row-err {
+      grid-column: 1 / -1;
+      font-size: 12px; color: #b71c1c; margin-top: 4px;
+    }
+
+    .empty {
+      text-align: center; padding: 60px 0;
+      color: #888; font-style: italic; font-size: 16px;
+    }
+    .err-banner {
+      background: #ffebee; color: #b71c1c;
+      border: 1px solid #ffcdd2;
+      padding: 12px; border-radius: 6px;
+      font-size: 13px; margin-bottom: 16px;
+    }
+
+    @media (max-width: 540px) {
+      .row-form { grid-template-columns: 1fr 1fr; }
+      .row-form .url-input { grid-column: 1 / -1; }
+      .row-form .btn-update { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>URL Cleanup</h1>
+    <div class="remaining" id="remaining"></div>
+
+    <div class="login" id="login">
+      <label>Admin secret</label>
+      <input type="password" id="secret" autocomplete="off">
+      <button id="loginBtn" type="button">Start</button>
+      <div id="loginMsg"></div>
+    </div>
+
+    <div id="bannerErr"></div>
+    <div id="list"></div>
+  </div>
+
+  <script>
+    const SS_KEY = 'urlCleanupSecret';
+    const el = (id) => document.getElementById(id);
+    const login = el('login');
+    const secretInput = el('secret');
+    const loginBtn = el('loginBtn');
+    const loginMsg = el('loginMsg');
+    const list = el('list');
+    const remaining = el('remaining');
+    const bannerErr = el('bannerErr');
+
+    let secret = sessionStorage.getItem(SS_KEY) || '';
+    let networks = [];
+
+    if (secret) {
+      secretInput.value = secret;
+      loadList();
+    }
+
+    loginBtn.addEventListener('click', () => {
+      secret = secretInput.value.trim();
+      if (!secret) return;
+      sessionStorage.setItem(SS_KEY, secret);
+      loadList();
+    });
+    secretInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); loginBtn.click(); }
+    });
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function escapeAttr(s) { return escapeHtml(s); }
+    function googleSearchUrl(title, network) {
+      const q = network ? `${title} on ${network}` : title;
+      return 'https://www.google.com/search?q=' + encodeURIComponent(q);
+    }
+
+    function networkOptionsHtml(currentValue) {
+      const opts = ['<option value="">— Select —</option>'];
+      networks.forEach(n => {
+        const sel = (n === currentValue) ? ' selected' : '';
+        opts.push(`<option value="${escapeAttr(n)}"${sel}>${escapeHtml(n)}</option>`);
+      });
+      const otherSel = (currentValue && !networks.includes(currentValue)) ? ' selected' : '';
+      opts.push(`<option value="__other"${otherSel}>Network not listed</option>`);
+      return opts.join('');
+    }
+
+    function rowHtml(show) {
+      const otherValue = (show.network && !networks.includes(show.network)) ? show.network : '';
+      const otherClass = otherValue ? ' show' : '';
+      const linkText = `${escapeHtml(show.title)} on ${escapeHtml(show.network || '???')}`;
+      const sharedNote = show.member_count > 1
+        ? `<span class="show-meta">${show.member_count} lists &middot; ${escapeHtml(show.members)}</span>`
+        : `<span class="show-meta">${escapeHtml(show.members)}</span>`;
+      return `
+        <div class="row" data-id="${show.id}">
+          <div class="row-head">
+            <a class="show-link" target="_blank" rel="noopener noreferrer"
+               href="${googleSearchUrl(show.title, show.network)}">${linkText}</a>
+            ${sharedNote}
+            <div class="current-url">${show.network_url ? 'current: ' + escapeHtml(show.network_url) : 'no URL set'}</div>
+          </div>
+          <div class="row-form">
+            <select class="net-select">${networkOptionsHtml(show.network)}</select>
+            <input type="text" class="url-input" placeholder="Paste direct URL" autocomplete="off">
+            <button class="btn-update" type="button">Update</button>
+            <input type="text" class="other-input${otherClass}" placeholder="New network name" value="${escapeAttr(otherValue)}">
+            <div class="row-err"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function attachRowHandlers(rowEl) {
+      const sel = rowEl.querySelector('.net-select');
+      const other = rowEl.querySelector('.other-input');
+      const url = rowEl.querySelector('.url-input');
+      const btn = rowEl.querySelector('.btn-update');
+      const errBox = rowEl.querySelector('.row-err');
+
+      sel.addEventListener('change', () => {
+        if (sel.value === '__other') {
+          other.classList.add('show');
+          other.focus();
+        } else {
+          other.classList.remove('show');
+        }
+      });
+
+      url.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); btn.click(); }
+      });
+
+      btn.addEventListener('click', async () => {
+        errBox.textContent = '';
+        const network = (sel.value === '__other' ? other.value : sel.value).trim();
+        const newUrl = url.value.trim();
+        if (!network) { errBox.textContent = 'Pick a network.'; return; }
+        if (!newUrl) { errBox.textContent = 'Paste a URL.'; return; }
+        btn.disabled = true;
+        const oldText = btn.textContent;
+        btn.textContent = '…';
+        try {
+          const res = await fetch('/api/admin-url-cleanup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              secret, action: 'save',
+              id: parseInt(rowEl.dataset.id, 10),
+              network, network_url: newUrl,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            errBox.textContent = data.error || `Error (${res.status})`;
+            btn.disabled = false;
+            btn.textContent = oldText;
+            return;
+          }
+          // If new network, refresh networks list (cheap: append locally).
+          if (!networks.includes(network)) {
+            networks.push(network);
+            networks.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+          }
+          rowEl.classList.add('removing');
+          setTimeout(() => {
+            rowEl.remove();
+            updateRemaining(-1);
+          }, 250);
+        } catch (e) {
+          errBox.textContent = 'Network error: ' + e.message;
+          btn.disabled = false;
+          btn.textContent = oldText;
+        }
+      });
+    }
+
+    function updateRemaining(delta) {
+      const n = list.querySelectorAll('.row').length;
+      remaining.textContent = `${n} show${n === 1 ? '' : 's'} remaining`;
+      if (n === 0) {
+        list.innerHTML = '<div class="empty">🎉 Queue empty. All shows have direct URLs.</div>';
+      }
+    }
+
+    async function loadList() {
+      bannerErr.innerHTML = '';
+      try {
+        const res = await fetch('/api/admin-url-cleanup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secret, action: 'list' }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (res.status === 401) {
+            sessionStorage.removeItem(SS_KEY);
+            secret = '';
+            login.style.display = 'block';
+            loginMsg.innerHTML = `<div style="margin-top:10px;padding:10px;background:#ffebee;border:1px solid #ffcdd2;border-radius:6px;color:#b71c1c;font-size:13px;">${escapeHtml(data.error || 'Invalid secret')}</div>`;
+            return;
+          }
+          bannerErr.innerHTML = `<div class="err-banner">${escapeHtml(data.error || `Error (${res.status})`)}</div>`;
+          return;
+        }
+        login.style.display = 'none';
+        networks = data.networks || [];
+        const shows = data.shows || [];
+        remaining.textContent = `${shows.length} show${shows.length === 1 ? '' : 's'} remaining`;
+        if (shows.length === 0) {
+          list.innerHTML = '<div class="empty">🎉 Queue empty. All shows have direct URLs.</div>';
+          return;
+        }
+        list.innerHTML = shows.map(rowHtml).join('');
+        list.querySelectorAll('.row').forEach(attachRowHandlers);
+      } catch (e) {
+        bannerErr.innerHTML = `<div class="err-banner">Network error: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+  </script>
+</body>
+</html>

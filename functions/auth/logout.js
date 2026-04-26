@@ -7,9 +7,14 @@ export async function onRequestGet(context) {
     await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(match[1]).run();
   }
 
-  const referer = request.headers.get('Referer') || '/';
-  const url = new URL(referer);
-  const redirect = url.pathname + url.hash;
+  const referer = request.headers.get('Referer');
+  let redirect = '/';
+  if (referer) {
+    try {
+      const url = new URL(referer);
+      redirect = url.pathname + url.hash;
+    } catch {}
+  }
 
   return new Response(null, {
     status: 302,

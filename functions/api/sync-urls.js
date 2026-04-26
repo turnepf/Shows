@@ -21,7 +21,7 @@ export async function onRequestGet(context) {
   let synced = 0;
   for (const source of withUrls) {
     const result = await env.DB.prepare(
-      `UPDATE shows SET network_url = ?, updated_at = datetime('now')
+      `UPDATE shows SET network_url = ?, enriched_at = datetime('now')
        WHERE LOWER(title) = ? AND archived = 0
          AND (network_url IS NULL OR network_url LIKE '%/search%' OR network_url LIKE '%/s?%')`
     ).bind(source.network_url, source.ltitle).run();

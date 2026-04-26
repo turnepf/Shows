@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Setup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #FBF5EB;
+      color: #2C2C2C;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .wrap {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 28px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    h1 { font-size: 20px; margin-bottom: 20px; color: #2C3E50; }
+    label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; margin-top: 14px; color: #555; }
+    label:first-of-type { margin-top: 0; }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: inherit;
+    }
+    input:focus { outline: none; border-color: #E67E22; }
+    .hint { font-size: 12px; color: #888; margin-top: 4px; }
+    button {
+      width: 100%;
+      margin-top: 24px;
+      padding: 12px;
+      background: #E67E22;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #d35400; }
+    button:disabled { background: #bbb; cursor: not-allowed; }
+    .msg {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .msg.ok { background: #e8f5e9; color: #1b5e20; border: 1px solid #c8e6c9; }
+    .msg.err { background: #ffebee; color: #b71c1c; border: 1px solid #ffcdd2; }
+    .msg strong { display: block; margin-bottom: 6px; }
+    .msg a { color: inherit; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>New member setup</h1>
+    <form id="f">
+      <label>Admin secret</label>
+      <input type="password" id="secret" autocomplete="off" required>
+
+      <label>Full name</label>
+      <input type="text" id="full_name" autocomplete="off" required>
+      <div class="hint" id="preview"></div>
+
+      <label>4-digit code</label>
+      <input type="text" id="code" autocomplete="off" required pattern="\d{4}" inputmode="numeric" maxlength="4">
+
+      <button type="submit" id="go">Create member + seed 8 shows</button>
+    </form>
+    <div id="msg"></div>
+  </div>
+
+  <script>
+    const f = document.getElementById('f');
+    const btn = document.getElementById('go');
+    const msg = document.getElementById('msg');
+    const nameInput = document.getElementById('full_name');
+    const preview = document.getElementById('preview');
+
+    nameInput.addEventListener('input', () => {
+      const v = nameInput.value.trim();
+      if (!v) { preview.textContent = ''; return; }
+      const first = v.split(/\s+/)[0];
+      const slugGuess = first.toLowerCase().replace(/[^a-z0-9]/g, '');
+      preview.innerHTML = `URL: <code>showpicker.club/${slugGuess}</code> (suffix added on collision) &middot; Display: <code>${first}'s Shows</code>`;
+    });
+
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.className = '';
+      msg.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Working…';
+
+      const body = {
+        secret: document.getElementById('secret').value,
+        full_name: nameInput.value.trim(),
+        code: document.getElementById('code').value.trim(),
+      };
+
+      try {
+        const res = await fetch('/api/admin-create-member', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          msg.className = 'msg err';
+          msg.textContent = data.error || `Error (${res.status})`;
+        } else {
+          msg.className = 'msg ok';
+          const seedList = data.seeded.map(s => '  • ' + s).join('\n');
+          msg.innerHTML = `<strong>Created ${data.name}</strong>URL: <a href="${data.url}" target="_blank">${data.url}</a>\nCode: ${data.code}\n\nSeeded:\n${seedList}`;
+          f.reset();
+        }
+      } catch (err) {
+        msg.className = 'msg err';
+        msg.textContent = 'Network error: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create member + seed 8 shows';
+      }
+    });
+  </script>
+</body>
+</html>
