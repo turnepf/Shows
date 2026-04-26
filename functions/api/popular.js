@@ -12,7 +12,7 @@ export async function onRequestGet(context) {
      GROUP BY LOWER(s.title)
      HAVING COUNT(DISTINCT s.member_slug) >= 2
      ORDER BY member_count DESC, CAST(s.rating AS REAL) DESC
-     LIMIT 20`
+     LIMIT 10`
   ).all();
 
   // Get member names to map slugs to first names
