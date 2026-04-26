@@ -26,14 +26,17 @@ Live at [showpicker.club](https://showpicker.club).
 
 ## Project Structure
 
+Only `public/` (static assets) and `functions/` (Pages Functions at the repo root) are deployed. Everything else — `schema.sql`, `.env`, `deployments.local.md`, `backups/` — stays out of the build output dir on purpose so it can never be served.
+
 ```
-├── index.html              Member picker + per-member lists (single-page app)
-├── tv.html                 Read-only TV view
-├── reporting.html          Internal stats
-├── manifest.json           PWA manifest
-├── sw.js                   Service worker
-├── _redirects              Cloudflare Pages routing rules
-├── schema.sql              Database schema
+├── public/                 Deployed static assets (build output dir)
+│   ├── index.html          Member picker + per-member lists (single-page app)
+│   ├── tv.html             Read-only TV view
+│   ├── reporting.html      Internal stats
+│   ├── manifest.json       PWA manifest
+│   ├── sw.js               Service worker
+│   └── _redirects          Cloudflare Pages routing rules
+├── schema.sql              Database schema (not deployed)
 ├── wrangler.toml           Cloudflare config
 └── functions/
     ├── api/
@@ -106,8 +109,9 @@ Handled by `_redirects`:
 5. **Create the Pages project and deploy:**
    ```bash
    wrangler pages project create shows
-   wrangler pages deploy . --project-name shows
+   wrangler pages deploy --project-name shows
    ```
+   Wrangler reads `pages_build_output_dir = "public"` from `wrangler.toml` and uploads only that directory. Functions at the repo root are picked up automatically. **Do not pass `.` as the directory** — that ships the entire repo (including `.env`, `backups/`, `wrangler.toml`) to production.
 
 6. **Set API key secrets** — use `printf` (not `echo`) to avoid trailing newlines that break things at runtime:
    ```bash
