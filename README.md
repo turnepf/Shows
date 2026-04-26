@@ -1,122 +1,121 @@
-# Show Tracker
+# Show Picker Club
 
-A shared TV show and movie tracker built on Cloudflare Pages + D1. Track what you're watching, waiting on, recommending, and planning to watch next.
+A shared TV show and movie tracker built on Cloudflare Pages + D1. Multiple members each maintain their own lists (Watching, Waiting, Recommending, Up Next), with a shared home page that surfaces what everyone is watching.
+
+Live at [showpicker.club](https://showpicker.club).
 
 ## Features
 
-- **4 lists:** Watching, Waiting, Recommending, Up Next
-- **IMDB ratings** and cast info (via OMDB API)
-- **Direct links** to shows on their streaming network
-- **4-digit code login** for editors
-- **Anyone can suggest** a show (with duplicate detection and fun quips)
-- **Move** shows between lists, archive, edit, delete
-- **Sorted by rating** within each list
-- **Shareable tab URLs** (e.g. `yoursite.com/#recommending`)
-- **Network counts** at the bottom of each list
-- **Movie flag** to distinguish movies from TV shows
+- **Multi-tenant:** one deployment serves every member; each member has their own slug (e.g. `/patrick`, `/sherry`) and their own lists.
+- **4 lists per member:** Watching, Waiting, Recommending, Up Next.
+- **Auto-enriched** with IMDB ratings, cast, and network links via OMDB and TMDB.
+- **TMDB next-season dates** with finale range and auto-detected series-complete status.
+- **What Members Are Watching** — home page shows the most-watched shows across all members.
+- **Suggest a show** — anyone (logged in or not) can suggest a show to any member.
+- **Per-member 4-digit login codes** stored in the DB (no hardcoded secrets).
+- **PWA** — installable to home screen.
+- **TV view** — `/tv/<slug>` renders a larger, read-only layout for casting to a TV.
+- **Watching With** field, per-show notes, recommended-by attribution, archive, hide/show toggles.
 
-## Setup with Claude
+## Tech Stack
 
-The easiest way to set up your own instance is with [Claude Code](https://claude.ai/code). Just paste this into Claude:
+- **Frontend:** Single HTML/CSS/JS page (no build step), service worker for PWA
+- **API:** Cloudflare Pages Functions
+- **Database:** Cloudflare D1 (SQLite at the edge)
+- **Enrichment:** OMDB API (ratings) + TMDB API (next-season dates, series status)
+
+## Project Structure
 
 ```
-Clone https://github.com/turnepf/Shows and set it up on my Cloudflare account. Walk me through each step:
-1. Clone the repo
-2. Create a Cloudflare D1 database called "shows-db" and update wrangler.toml with the database ID
-3. Run schema.sql against the database
-4. Run seed-sample.sql to load sample data
-5. Ask me for my app title and names to customize APP_TITLE and OWNERS in index.html
-6. Ask me for two 4-digit login codes and two editor names, then update functions/auth/login.js and set the Cloudflare Pages secrets
-7. Ask me for my OMDB API key (free at omdbapi.com) and set it as a secret
-8. Create a Cloudflare Pages project and deploy
-9. Optionally set up a custom domain
+├── index.html              Member picker + per-member lists (single-page app)
+├── tv.html                 Read-only TV view
+├── reporting.html          Internal stats
+├── manifest.json           PWA manifest
+├── sw.js                   Service worker
+├── _redirects              Cloudflare Pages routing rules
+├── schema.sql              Database schema
+├── wrangler.toml           Cloudflare config
+└── functions/
+    ├── api/
+    │   ├── shows.js              GET all shows for a member / POST new
+    │   ├── shows/[id].js         GET / PUT / DELETE single show
+    │   ├── shows/[id]/move.js    Move to a different list
+    │   ├── shows/[id]/archive.js Archive a show
+    │   ├── shows/[id]/actors.js  Get cast list
+    │   ├── shows/check.js        Duplicate-detection for suggestions
+    │   ├── shows/share.js        Share-link handler
+    │   ├── members.js            List all members
+    │   ├── popular.js            Top shows across all members
+    │   ├── activity.js           Recent activity feed
+    │   ├── suggestions.js        POST suggestion (public, no auth)
+    │   ├── enrich.js             OMDB/TMDB enrichment
+    │   ├── reporting.js          Stats for /reporting
+    │   └── sync-urls.js          Network URL sync helper
+    └── auth/
+        ├── login.js          4-digit code login (codes live in member_codes)
+        ├── logout.js         Clear session
+        └── check.js          Check auth status
 ```
 
-Claude will walk you through it interactively.
+## Routing
 
-## Manual Setup
+Handled by `_redirects`:
+
+| Path             | Behavior                                  |
+|------------------|-------------------------------------------|
+| `/tv/*`          | Rewrites to `tv.html` (TV view)           |
+| `/dorothy[/]`    | 301 to `/whitt` (legacy slug rename)      |
+| `/*`             | Falls through to `index.html` (SPA)       |
+
+`index.html` parses the URL path client-side to decide whether to show the member picker or a specific member's lists.
+
+## Setup
 
 ### Prerequisites
 
-- A [Cloudflare](https://cloudflare.com) account (free tier works)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) installed
-- A free [OMDB API key](http://www.omdbapi.com/apikey.aspx) (verify via email after signing up)
+- A [Cloudflare](https://cloudflare.com) account
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
+- A free [OMDB API key](http://www.omdbapi.com/apikey.aspx)
+- A free [TMDB API key](https://www.themoviedb.org/settings/api)
 
 ### Steps
 
-1. **Clone the repo:**
+1. **Clone:**
    ```bash
    git clone https://github.com/turnepf/Shows.git
    cd Shows
    ```
 
-2. **Customize the app** — Edit `index.html` and change `APP_TITLE` and `OWNERS` near the top of the `<script>` block:
-   ```js
-   const APP_TITLE = "Your App Title";
-   const OWNERS = "Your Names";
-   ```
-
-3. **Create the database:**
+2. **Create the D1 database:**
    ```bash
    wrangler d1 create shows-db
    ```
-   Copy the `database_id` from the output into `wrangler.toml`.
+   Copy the `database_id` into `wrangler.toml`.
 
-4. **Set up the schema and sample data:**
+3. **Apply the schema:**
    ```bash
    wrangler d1 execute shows-db --remote --file=schema.sql
-   wrangler d1 execute shows-db --remote --file=seed-sample.sql
    ```
 
-5. **Update login codes** — Edit `functions/auth/login.js` and change the secret names and editor names to match your setup.
+4. **Seed members + login codes** — insert rows into `members` and `member_codes`. Example:
+   ```sql
+   INSERT INTO members (slug, name) VALUES ('patrick', 'Patrick Turner');
+   INSERT INTO member_codes (member_slug, code, editor_name) VALUES ('patrick', '1234', 'Patrick');
+   ```
 
-6. **Deploy:**
+5. **Create the Pages project and deploy:**
    ```bash
    wrangler pages project create shows
    wrangler pages deploy . --project-name shows
    ```
 
-7. **Set secrets:**
-
-   > ⚠️ Use `printf` instead of `echo` — `echo` appends a trailing newline that causes login codes to silently fail at runtime.
-
+6. **Set API key secrets** — use `printf` (not `echo`) to avoid trailing newlines that break things at runtime:
    ```bash
    printf "your-omdb-key" | wrangler pages secret put OMDB_API_KEY --project-name shows
-   printf "1234" | wrangler pages secret put LOGIN_CODE_1 --project-name shows
-   printf "5678" | wrangler pages secret put LOGIN_CODE_2 --project-name shows
+   printf "your-tmdb-key" | wrangler pages secret put TMDB_API_KEY --project-name shows
    ```
 
-8. **(Optional) Add a custom domain** — In the Cloudflare dashboard, go to Pages > your project > Custom domains.
-
-## Tech Stack
-
-- **Frontend:** Single HTML/CSS/JS page (no build step)
-- **API:** Cloudflare Pages Functions
-- **Database:** Cloudflare D1 (SQLite at the edge)
-- **Ratings:** OMDB API (free tier, 1,000 req/day)
-
-## Project Structure
-
-```
-├── index.html              Single page app
-├── schema.sql              Database schema
-├── seed-sample.sql         Sample data
-├── wrangler.toml           Cloudflare config
-└── functions/
-    ├── api/
-    │   ├── shows.js        GET all / POST new show
-    │   ├── suggestions.js  POST suggestion (public)
-    │   └── shows/
-    │       ├── [id].js     GET / PUT / DELETE single show
-    │       └── [id]/
-    │           ├── move.js     Move to different list
-    │           ├── archive.js  Archive a show
-    │           └── actors.js   Get cast list
-    └── auth/
-        ├── login.js        4-digit code login
-        ├── logout.js       Clear session
-        └── check.js        Check auth status
-```
+7. **(Optional) Custom domain** — Cloudflare dashboard → Pages → your project → Custom domains.
 
 ## License
 
