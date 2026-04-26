@@ -111,7 +111,8 @@ export async function onRequestGet(context) {
     return new Response(JSON.stringify({ error: 'member required' }), { status: 400, headers: corsHeaders() });
   }
   const { results } = await env.DB.prepare(
-    `SELECT s.*, (SELECT COUNT(*) FROM actors a WHERE a.show_id = s.id) as actor_count
+    `SELECT s.*,
+       (SELECT GROUP_CONCAT(name, ', ') FROM actors a WHERE a.show_id = s.id) as actors
      FROM shows s WHERE s.archived = 0 AND s.member_slug = ? ORDER BY s.title COLLATE NOCASE`
   ).bind(member).all();
   return new Response(JSON.stringify({ shows: results }), { headers: corsHeaders() });

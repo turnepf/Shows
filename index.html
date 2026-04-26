@@ -365,6 +365,7 @@
 
       <h3 id="whats-new" style="font-size: 15px; color: #2C3E50; margin-bottom: 8px; margin-top: 24px; text-align: center;">What's New</h3>
       <div style="padding: 16px 24px; background: #f0ebe3; border-radius: 10px; font-size: 13px; color: #555; line-height: 1.8; text-align: left;">
+        <strong>4/26</strong> &mdash; <strong>Cleaner show rows.</strong> Each show is now one tidy line: title, network, rating. Tap the title to expand and see genre, cast, who recommended it, next season dates, who you're watching with, and notes &mdash; only the lines with data show up.<br>
         <strong>4/21</strong> &mdash; <strong>My Shows link.</strong> When logged in, a quick "My Shows" link appears on the home page just below the title.<br>
         <strong>4/17</strong> &mdash; <strong>Quick actions.</strong> On the Watching list, "Watched it" moves a show to Recommending and "Season done" moves it to Waiting &mdash; no dropdown needed.<br>
         <strong>4/17</strong> &mdash; <strong>Genre tags.</strong> Shows now display genre info (Drama, Comedy, Thriller, etc.) pulled from TMDB. Toggle visibility with the Genres pill.<br>
@@ -624,12 +625,22 @@
     let authMember = null;
     let owners = '';
 
-    const TOGGLES = ['rating', 'network', 'from', 'dates'];
-    const TOGGLE_LABELS = { rating: 'Ratings', network: 'Networks', from: 'Recommended By', dates: 'Dates' };
-    function getVisible(key) { return localStorage.getItem(`hide_${key}`) !== '1'; }
-    function toggleVisible(key) {
-      localStorage.setItem(`hide_${key}`, getVisible(key) ? '1' : '0');
-      renderShows();
+    function buildDetailLines(show, opts = {}) {
+      const lines = [];
+      if (show.genres) lines.push(escapeHtml(show.genres));
+      if (show.actors) lines.push(escapeHtml(show.actors));
+      if (!opts.aggregate) {
+        if (show.recommended_by) lines.push(`Recommended by ${escapeHtml(show.recommended_by)}`);
+        if (show.next_season_date) {
+          const start = formatDate(show.next_season_date);
+          const end = show.season_end_date ? formatDate(show.season_end_date) : null;
+          const range = end && end !== start ? `${start} – ${end}` : start;
+          lines.push(`Next season: ${range}`);
+        }
+        if (show.watching_with) lines.push(`Watching with ${escapeHtml(show.watching_with)}`);
+        if (show.notes) lines.push(escapeHtml(show.notes));
+      }
+      return lines.map(l => `<div class="show-detail-line">${l}</div>`).join('');
     }
 
     document.getElementById('inputNetwork').addEventListener('change', function() {
@@ -705,21 +716,21 @@
           const popList = document.getElementById('popularList');
           const hasRealUrl = (url) => url && !url.includes('/search') && !url.includes('/s?') && url !== '#';
           popList.innerHTML = popData.shows.map((show, i) => {
-            const rating = show.rating ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>` : '';
             const network = show.network
               ? hasRealUrl(show.network_url)
                 ? ` <span class="show-on">on</span> <a class="show-network" href="${show.network_url}" target="_blank" rel="noopener">${escapeHtml(show.network)}</a>`
                 : ` <span class="show-on">on</span> <span class="show-network-plain">${escapeHtml(show.network)}</span>`
               : '';
+            const rating = show.rating ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>` : '';
+            const movieTag = show.movie ? ' <span class="show-movie">(Movie)</span>' : '';
             const memberList = (show.members || []).join(', ');
             const badge = ` <span style="font-size: 11px; color: #95a5a6; cursor: pointer; text-decoration: underline dotted;" onclick="alert('${memberList.replace(/'/g, "\\'")}')" title="${memberList}">${show.member_count} Members</span>`;
+            const details = buildDetailLines(show, { aggregate: true });
             return `<div class="show-row popular-row" ${i >= 5 ? 'style="display:none;"' : ''}>
               <button class="share-btn popular-add-btn" style="display:none;" onclick="openAddMyList('${escapeHtml(show.title).replace(/'/g, "\\'")}', '${escapeHtml(show.network || '').replace(/'/g, "\\'")}', '${escapeHtml(show.network_url || '').replace(/'/g, "\\'")}', ${show.movie || 0})" title="Add to my list">+</button>
-              <span class="show-info"><span class="show-title clickable" onclick="toggleActors(${show.id})">${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${network}${badge}</span>
+              <span class="show-info"><span class="show-title clickable" onclick="toggleExpand(${show.id})">${escapeHtml(show.title)}</span>${network}${rating}${movieTag}${badge}</span>
             </div>
-            <div class="show-actors" id="actors-${show.id}">
-              <div class="actor-list" id="actors-list-${show.id}"></div>
-            </div>`;
+            <div class="show-actors" id="actors-${show.id}">${details}</div>`;
           }).join('');
           if (popData.shows.length > 5) {
             popList.innerHTML += `<div id="popularToggle" style="text-align: center; padding: 8px 0;"><button onclick="togglePopular(true)" style="background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;">More &#9660;</button></div>`;
@@ -907,39 +918,21 @@
       }
       empty.classList.add('hidden');
 
-      const showRating = getVisible('rating');
-      const showNetwork = getVisible('network');
-      const showFrom = getVisible('from');
-      const showDates = getVisible('dates');
-      const showNotes = getVisible('notes');
-
       container.innerHTML = filtered.map(show => {
-        const rating = showRating && show.rating
+        const hasRealUrl = show.network_url && !show.network_url.includes('/search') && !show.network_url.includes('/s?') && show.network_url !== '#';
+        const network = show.network
+          ? hasRealUrl
+            ? ` <span class="show-on">on</span> <a class="show-network" href="${show.network_url}" target="_blank" rel="noopener">${escapeHtml(show.network)}</a>`
+            : ` <span class="show-on">on</span> <span class="show-network-plain">${escapeHtml(show.network)}</span>`
+          : '';
+        const rating = show.rating
           ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>`
           : '';
         const series = show.full_series
           ? ' <span title="Series Complete">🎬</span>'
           : '';
-        const from = showFrom && show.recommended_by
-          ? ` <span class="show-from">from ${escapeHtml(show.recommended_by)}</span>`
-          : '';
-        const hasRealUrl = show.network_url && !show.network_url.includes('/search') && !show.network_url.includes('/s?') && show.network_url !== '#';
-        const network = showNetwork && show.network
-          ? hasRealUrl
-            ? ` <span class="show-on">on</span> <a class="show-network" href="${show.network_url}" target="_blank" rel="noopener">${escapeHtml(show.network)}</a>`
-            : ` <span class="show-on">on</span> <span class="show-network-plain">${escapeHtml(show.network)}</span>`
-          : '';
-        let nextDate = '';
-        if (showDates && show.next_season_date) {
-          const start = formatDate(show.next_season_date);
-          const end = show.season_end_date ? formatDate(show.season_end_date) : null;
-          nextDate = end && end !== start
-            ? ` <span class="show-next-date">(${start} – ${end})</span>`
-            : ` <span class="show-next-date">(${start})</span>`;
-        }
-        const watchingWith = show.watching_with
-          ? ` <span class="show-watching-with">with ${escapeHtml(show.watching_with)}</span>`
-          : '';
+        const movieTag = show.movie ? ' <span class="show-movie">(Movie)</span>' : '';
+        const details = buildDetailLines(show);
 
         let actions = '';
         if (isEditor) {
@@ -965,12 +958,10 @@
         return `
           <div class="show-row">
             <button class="share-btn" onclick="openShareModal(${show.id})" title="Share to another list">+</button>
-            <span class="show-info"><span class="show-title clickable" onclick="toggleActors(${show.id})">${escapeHtml(show.title)}${show.movie ? ' <span class="show-movie">(Movie)</span>' : ''}</span>${rating}${series}${network}${nextDate}${from}${watchingWith}</span>
+            <span class="show-info"><span class="show-title clickable" onclick="toggleExpand(${show.id})">${escapeHtml(show.title)}</span>${network}${rating}${series}${movieTag}</span>
             ${actions}
           </div>
-          <div class="show-actors" id="actors-${show.id}">
-            <div class="actor-list" id="actors-list-${show.id}"></div>
-          </div>`;
+          <div class="show-actors" id="actors-${show.id}">${details}</div>`;
       }).join('');
 
       // Footer: legend + network counts
@@ -999,40 +990,14 @@
         <option value="added"${sortOrder === 'added' ? ' selected' : ''}>Sort by Date Added</option>
       </select>`;
       container.innerHTML += `<div class="toggle-bar">${sortHtml}</div>`;
-      const togglesHtml = TOGGLES.map(key => {
-        const vis = getVisible(key);
-        return `<button class="toggle-pill${vis ? ' active' : ''}" onclick="toggleVisible('${key}')" title="${vis ? 'Hide' : 'Show'} ${TOGGLE_LABELS[key]}">${TOGGLE_LABELS[key]}</button>`;
-      }).join('');
-      container.innerHTML += `<div class="toggle-bar">${togglesHtml}</div>`;
     }
 
-    async function toggleActors(showId) {
+    function toggleExpand(showId) {
       const container = document.getElementById(`actors-${showId}`);
-      if (container.classList.contains('visible')) {
-        container.classList.remove('visible');
-        return;
-      }
+      if (!container) return;
+      const wasVisible = container.classList.contains('visible');
       document.querySelectorAll('.show-actors.visible').forEach(el => el.classList.remove('visible'));
-      container.classList.add('visible');
-      const list = document.getElementById(`actors-list-${showId}`);
-      if (list.children.length > 0) return;
-
-      list.innerHTML = '<div class="show-detail-line">Loading...</div>';
-      try {
-        const show = shows.find(s => s.id === showId);
-        const res = await fetch(`/api/shows/${showId}/actors`);
-        const data = await res.json();
-        let html = '';
-        if (show && show.genres) html += `<div class="show-detail-line">${escapeHtml(show.genres)}</div>`;
-        if (data.actors && data.actors.length > 0) html += `<div class="show-detail-line">${data.actors.map(a => escapeHtml(a)).join(', ')}</div>`;
-        if (show && show.notes) {
-          html += `<div class="show-detail-line">${escapeHtml(show.notes)}</div>`;
-        }
-        if (!html) html = '<div class="show-detail-line" style="color:#bdc3c7;">No additional info</div>';
-        list.innerHTML = html;
-      } catch (e) {
-        list.innerHTML = '<span style="color:#e74c3c;font-size:12px">Failed to load</span>';
-      }
+      if (!wasVisible) container.classList.add('visible');
     }
 
     function findOnNetwork() {

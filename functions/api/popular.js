@@ -3,9 +3,9 @@ export async function onRequestGet(context) {
 
   const { results } = await env.DB.prepare(
     `SELECT LOWER(s.title) as ltitle, s.title, s.rating, s.network, s.network_url, s.movie,
+       MAX(s.genres) as genres,
        MIN(s.id) as id,
        COUNT(DISTINCT s.member_slug) as member_count,
-       (SELECT COUNT(*) FROM actors a WHERE a.show_id = MIN(s.id)) as actor_count,
        GROUP_CONCAT(DISTINCT s.member_slug) as member_slugs
      FROM shows s
      WHERE s.archived = 0 AND s.list = 'watching'
@@ -14,6 +14,14 @@ export async function onRequestGet(context) {
      ORDER BY member_count DESC, CAST(s.rating AS REAL) DESC
      LIMIT 10`
   ).all();
+
+  // Pull actors for each (one query per show; n=10 max)
+  for (const show of results) {
+    const { results: acts } = await env.DB.prepare(
+      'SELECT name FROM actors WHERE show_id = ?'
+    ).bind(show.id).all();
+    show.actors = acts.map(a => a.name).join(', ') || null;
+  }
 
   // Get member names to map slugs to first names
   const { results: members } = await env.DB.prepare(
