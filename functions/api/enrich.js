@@ -33,9 +33,11 @@ function generateSearchUrl(network, title) {
   return cfg.base + '?' + params.toString();
 }
 
-async function tryOMDB(title, apiKey) {
+async function tryOMDB(title, apiKey, type) {
   try {
-    const res = await fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${apiKey}`);
+    let url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${apiKey}`;
+    if (type) url += `&type=${type}`;
+    const res = await fetch(url);
     const data = await res.json();
     if (data.Response === 'True') {
       return {
@@ -48,9 +50,11 @@ async function tryOMDB(title, apiKey) {
   return null;
 }
 
-async function searchOMDB(title, apiKey) {
+async function searchOMDB(title, apiKey, type) {
   try {
-    const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(title)}&apikey=${apiKey}`);
+    let url = `https://www.omdbapi.com/?s=${encodeURIComponent(title)}&apikey=${apiKey}`;
+    if (type) url += `&type=${type}`;
+    const res = await fetch(url);
     const data = await res.json();
     if (data.Response === 'True' && data.Search && data.Search.length > 0) {
       // Fetch full details for the first result
@@ -69,30 +73,30 @@ async function searchOMDB(title, apiKey) {
   return null;
 }
 
-async function fetchOMDB(title, apiKey) {
+async function fetchOMDB(title, apiKey, type) {
   // Try exact title
-  let result = await tryOMDB(title, apiKey);
+  let result = await tryOMDB(title, apiKey, type);
   if (result) return result;
 
   // Try with "The " prepended
-  result = await tryOMDB('The ' + title, apiKey);
+  result = await tryOMDB('The ' + title, apiKey, type);
   if (result) return result;
 
   // Try without "The " prefix
   if (title.toLowerCase().startsWith('the ')) {
-    result = await tryOMDB(title.slice(4), apiKey);
+    result = await tryOMDB(title.slice(4), apiKey, type);
     if (result) return result;
   }
 
   // Try collapsing spaces (e.g. "Land Man" -> "Landman")
   const collapsed = title.replace(/\s+/g, '');
   if (collapsed !== title) {
-    result = await tryOMDB(collapsed, apiKey);
+    result = await tryOMDB(collapsed, apiKey, type);
     if (result) return result;
   }
 
   // Fall back to search endpoint
-  result = await searchOMDB(title, apiKey);
+  result = await searchOMDB(title, apiKey, type);
   if (result) return result;
 
   return { canonicalTitle: null, rating: null, actors: [] };
@@ -111,7 +115,7 @@ export async function onRequestGet(context) {
   const member = url.searchParams.get('member');
 
   // Find up to 5 shows missing rating or actors or URL
-  let query = `SELECT s.id, s.title, s.network, s.network_url
+  let query = `SELECT s.id, s.title, s.network, s.network_url, s.movie
      FROM shows s
      WHERE s.archived = 0
        AND (s.rating IS NULL
@@ -124,7 +128,7 @@ export async function onRequestGet(context) {
   let enriched = 0;
 
   for (const show of needsRating) {
-    const omdb = await fetchOMDB(show.title, apiKey);
+    const omdb = await fetchOMDB(show.title, apiKey, show.movie ? 'movie' : 'series');
 
     // Update canonical title if OMDB returned a different one
     if (omdb.canonicalTitle && omdb.canonicalTitle !== show.title) {

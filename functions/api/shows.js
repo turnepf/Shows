@@ -48,9 +48,11 @@ async function getSession(request, env) {
   return null;
 }
 
-async function tryOMDB(title, apiKey) {
+async function tryOMDB(title, apiKey, type) {
   try {
-    const res = await fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${apiKey}`);
+    let url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${apiKey}`;
+    if (type) url += `&type=${type}`;
+    const res = await fetch(url);
     const data = await res.json();
     if (data.Response === 'True') {
       return {
@@ -63,9 +65,11 @@ async function tryOMDB(title, apiKey) {
   return null;
 }
 
-async function searchOMDB(title, apiKey) {
+async function searchOMDB(title, apiKey, type) {
   try {
-    const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(title)}&apikey=${apiKey}`);
+    let url = `https://www.omdbapi.com/?s=${encodeURIComponent(title)}&apikey=${apiKey}`;
+    if (type) url += `&type=${type}`;
+    const res = await fetch(url);
     const data = await res.json();
     if (data.Response === 'True' && data.Search && data.Search.length > 0) {
       const detailRes = await fetch(`https://www.omdbapi.com/?i=${data.Search[0].imdbID}&apikey=${apiKey}`);
@@ -82,23 +86,23 @@ async function searchOMDB(title, apiKey) {
   return null;
 }
 
-async function fetchOMDB(title, env) {
+async function fetchOMDB(title, env, type) {
   const apiKey = env.OMDB_API_KEY;
   if (!apiKey) return { canonicalTitle: null, rating: null, actors: [] };
-  let result = await tryOMDB(title, apiKey);
+  let result = await tryOMDB(title, apiKey, type);
   if (result) return result;
-  result = await tryOMDB('The ' + title, apiKey);
+  result = await tryOMDB('The ' + title, apiKey, type);
   if (result) return result;
   if (title.toLowerCase().startsWith('the ')) {
-    result = await tryOMDB(title.slice(4), apiKey);
+    result = await tryOMDB(title.slice(4), apiKey, type);
     if (result) return result;
   }
   const collapsed = title.replace(/\s+/g, '');
   if (collapsed !== title) {
-    result = await tryOMDB(collapsed, apiKey);
+    result = await tryOMDB(collapsed, apiKey, type);
     if (result) return result;
   }
-  result = await searchOMDB(title, apiKey);
+  result = await searchOMDB(title, apiKey, type);
   if (result) return result;
   return { canonicalTitle: null, rating: null, actors: [] };
 }
@@ -159,7 +163,7 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ error: 'Title and list are required' }), { status: 400, headers: corsHeaders() });
   }
 
-  const omdb = await fetchOMDB(title, env);
+  const omdb = await fetchOMDB(title, env, movie ? 'movie' : 'series');
   const finalTitle = omdb.canonicalTitle || title;
 
   const existing = await env.DB.prepare(
