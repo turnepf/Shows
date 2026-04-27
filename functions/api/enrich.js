@@ -114,16 +114,22 @@ export async function onRequestGet(context) {
   const url = new URL(request.url);
   const member = url.searchParams.get('member');
 
-  // Find up to 5 shows missing rating or actors or URL
+  // Soft caps to keep us well clear of OMDB's free-tier 1k/day and TMDB's per-key budget.
+  // Override per-call with ?max_omdb=N and ?max_tmdb=N if you need a larger sweep.
+  const maxOmdb = parseInt(url.searchParams.get('max_omdb') || '50', 10);
+  const maxTmdb = parseInt(url.searchParams.get('max_tmdb') || '50', 10);
+
   let query = `SELECT s.id, s.title, s.network, s.network_url, s.movie
      FROM shows s
      WHERE s.archived = 0
        AND (s.rating IS NULL
          OR s.network_url IS NULL
-         OR NOT EXISTS (SELECT 1 FROM actors a WHERE a.show_id = s.id))`;
-  if (member) query += ` AND s.member_slug = '${member}'`;
-
-  const { results: needsRating } = await env.DB.prepare(query).all();
+         OR NOT EXISTS (SELECT 1 FROM actors a WHERE a.show_id = s.id))
+     LIMIT ?`;
+  const stmt = member
+    ? env.DB.prepare(query.replace('LIMIT ?', `AND s.member_slug = '${member}' LIMIT ?`)).bind(maxOmdb)
+    : env.DB.prepare(query).bind(maxOmdb);
+  const { results: needsRating } = await stmt.all();
 
   let enriched = 0;
 
@@ -180,13 +186,15 @@ export async function onRequestGet(context) {
     enriched++;
   }
 
-  // TMDB: check next season dates for Watching and Waiting shows
+  // TMDB: check next season dates for Watching and Waiting shows.
+  // Cap the same way; oldest/least-recently-enriched first so the budget rotates evenly.
   const tmdbKey = env.TMDB_API_KEY;
   let tmdbUpdated = 0;
   if (tmdbKey) {
     let tmdbQuery = `SELECT id, title, movie, list FROM shows
        WHERE archived = 0 AND movie = 0`;
     if (member) tmdbQuery += ` AND member_slug = '${member}'`;
+    tmdbQuery += ` ORDER BY COALESCE(enriched_at, '1970-01-01') ASC LIMIT ${maxTmdb}`;
 
     const { results: tmdbShows } = await env.DB.prepare(tmdbQuery).all();
 
