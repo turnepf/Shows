@@ -816,16 +816,21 @@
             myShowsLink.href = `/${authMember}`;
             myShowsLink.classList.remove('hidden');
           }
-          // Don't auto-enter edit mode; wait for user to click Edit
+          // On the user's own member page, expose the Add button immediately —
+          // no need to enter edit mode just to add a show.
+          if (authMember && typeof memberSlug !== 'undefined' && authMember === memberSlug) {
+            const addBtn = document.getElementById('addBtn');
+            if (addBtn) addBtn.classList.remove('hidden');
+          }
+          // Per-row Edit/Delete affordances still require clicking Edit.
         }
       } catch (e) {}
     }
 
     function login() {
       if (isEditor) {
-        // Toggle out of edit mode
+        // Toggle out of edit mode — keep the Add button visible since they're still logged in.
         isEditor = false;
-        document.getElementById('addBtn').classList.add('hidden');
         document.getElementById('loginBtn').classList.remove('active');
         renderShows();
         return;
