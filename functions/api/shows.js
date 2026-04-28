@@ -114,10 +114,13 @@ export async function onRequestGet(context) {
   if (!member) {
     return new Response(JSON.stringify({ error: 'member required' }), { status: 400, headers: corsHeaders() });
   }
+  // ?include_archived=1 — search popup needs archived rows too. Default keeps the existing behaviour (active only).
+  const includeArchived = url.searchParams.get('include_archived') === '1';
+  const archivedFilter = includeArchived ? '' : 'AND s.archived = 0';
   const { results } = await env.DB.prepare(
     `SELECT s.*,
        (SELECT GROUP_CONCAT(name, ', ') FROM actors a WHERE a.show_id = s.id) as actors
-     FROM shows s WHERE s.archived = 0 AND s.member_slug = ? ORDER BY s.title COLLATE NOCASE`
+     FROM shows s WHERE s.member_slug = ? ${archivedFilter} ORDER BY s.title COLLATE NOCASE`
   ).bind(member).all();
   return new Response(JSON.stringify({ shows: results }), { headers: corsHeaders() });
 }

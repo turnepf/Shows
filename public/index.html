@@ -69,6 +69,13 @@
 
     .btn-add { background: #E67E22; color: #fff; }
     .btn-add:hover { background: #d35400; }
+    .btn-search { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+    .btn-search:hover { background: rgba(255,255,255,0.25); }
+    .search-results { max-height: 50vh; overflow-y: auto; margin-top: 12px; border-top: 1px solid #ecf0f1; padding-top: 8px; }
+    .search-results .show-row { padding: 8px 4px; }
+    .search-meta { font-size: 12px; color: #7f8c8d; margin-bottom: 8px; }
+    .search-list-label { color: #7f8c8d; font-size: 12px; margin-left: 6px; }
+    .search-empty { text-align: center; color: #7f8c8d; padding: 24px 0; font-size: 13px; }
 
     .btn-small { padding: 4px 8px; font-size: 11px; border-radius: 4px; }
     .btn-move { background: #3498db; color: #fff; }
@@ -410,6 +417,7 @@
         <div class="header-actions">
           <button class="btn btn-add hidden" id="addBtn" title="Add a new show" onclick="openAddModal()">+ Add</button>
           <button class="btn btn-login" id="loginBtn" title="Toggle edit mode" onclick="login()">Edit</button>
+          <button class="btn btn-search" id="searchBtn" title="Search this member's shows" onclick="openSearchModal()">Search</button>
         </div>
       </div>
       <div class="tabs" id="tabs">
@@ -587,6 +595,24 @@
       <div class="modal-actions">
         <button class="btn btn-cancel" onclick="closeAddMyList()">Cancel</button>
         <button class="btn btn-save" onclick="submitAddMyList()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Modal -->
+  <div class="modal-overlay hidden" id="searchOverlay" onclick="closeSearchModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2 id="searchModalTitle">Search Shows</h2>
+      <label for="searchTitleInput">Title</label>
+      <input type="text" id="searchTitleInput" placeholder="e.g. Fargo" oninput="renderSearchResults()" autocomplete="off">
+
+      <label for="searchActorInput">Actor</label>
+      <input type="text" id="searchActorInput" placeholder="e.g. Billy Bob Thornton" oninput="renderSearchResults()" autocomplete="off">
+
+      <div id="searchResults" class="search-results"></div>
+
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeSearchModal()">Close</button>
       </div>
     </div>
   </div>
@@ -1237,6 +1263,81 @@
       } else {
         alert(text);
       }
+    }
+
+    let searchableShows = [];
+
+    async function openSearchModal() {
+      const overlay = document.getElementById('searchOverlay');
+      document.getElementById('searchTitleInput').value = '';
+      document.getElementById('searchActorInput').value = '';
+      const titleEl = document.getElementById('appTitle');
+      const memberLabel = (titleEl && titleEl.textContent.trim()) || 'these';
+      document.getElementById('searchModalTitle').textContent = `Search ${memberLabel}`;
+      document.getElementById('searchResults').innerHTML = '<div class="search-empty">Loading…</div>';
+      overlay.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`/api/shows?member=${encodeURIComponent(memberSlug)}&include_archived=1`);
+        const data = await res.json();
+        searchableShows = data.shows || [];
+        renderSearchResults();
+      } catch (e) {
+        document.getElementById('searchResults').innerHTML = '<div class="search-empty" style="color:#c0392b;">Failed to load shows.</div>';
+      }
+      setTimeout(() => document.getElementById('searchTitleInput').focus(), 50);
+    }
+
+    function closeSearchModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('searchOverlay').classList.add('hidden');
+    }
+
+    function toggleSearchExpand(showId) {
+      const el = document.getElementById(`search-actors-${showId}`);
+      if (el) el.classList.toggle('visible');
+    }
+
+    function renderSearchResults() {
+      const titleQ = document.getElementById('searchTitleInput').value.trim().toLowerCase();
+      const actorQ = document.getElementById('searchActorInput').value.trim().toLowerCase();
+      const container = document.getElementById('searchResults');
+
+      if (!titleQ && !actorQ) {
+        container.innerHTML = '<div class="search-empty">Type to search.</div>';
+        return;
+      }
+
+      const matches = searchableShows.filter(show => {
+        const titleHit = !titleQ || (show.title || '').toLowerCase().includes(titleQ);
+        const actorHit = !actorQ || (show.actors || '').toLowerCase().includes(actorQ);
+        return titleHit && actorHit;
+      });
+
+      if (matches.length === 0) {
+        container.innerHTML = '<div class="search-empty">No matches in this library.</div>';
+        return;
+      }
+
+      const labelFor = { watching: 'Watching', waiting: 'Waiting', recommending: 'Recommending', next: 'Up Next' };
+
+      const meta = `<div class="search-meta">${matches.length} match${matches.length === 1 ? '' : 'es'}</div>`;
+      container.innerHTML = meta + matches.map(show => {
+        const list = show.archived ? 'Archived' : (labelFor[show.list] || show.list);
+        const network = show.network ? ` <span class="show-on">on</span> <span class="show-network-plain">${escapeHtml(show.network)}</span>` : '';
+        const rating = show.rating ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(show.rating)}</span>` : '';
+        const movieTag = show.movie ? ' <span class="show-movie">(Movie)</span>' : '';
+        const series = show.full_series ? ' <span title="Series Complete">🎬</span>' : '';
+        const listLabel = `<span class="search-list-label">· ${escapeHtml(list)}</span>`;
+        const details = buildDetailLines(show);
+        return `
+          <div class="show-row">
+            <span class="show-info">
+              <span class="show-title clickable" onclick="toggleSearchExpand(${show.id})">${escapeHtml(show.title)}</span>${network}${rating}${series}${movieTag}${listLabel}
+            </span>
+          </div>
+          <div class="show-actors" id="search-actors-${show.id}">${details}</div>`;
+      }).join('');
     }
 
     function openSuggestModal() {
