@@ -575,7 +575,7 @@
       <label for="addMyList">Add to</label>
       <select id="addMyList">
         <option value="watching">Watching</option>
-        <option value="waiting">Waiting on Next Season</option>
+        <option value="waiting">Waiting on Next Showings</option>
         <option value="recommending">Recommending</option>
         <option value="next">Up Next</option>
       </select>
@@ -948,7 +948,7 @@
           let quickBtns = '';
           if (show.list === 'watching') {
             quickBtns = `<button class="btn btn-small" style="background:#8e44ad;color:#fff;" title="Move to Recommending" onclick="moveShow(${show.id}, 'recommending')">Watched it</button>
-               <button class="btn btn-small" style="background:#2980b9;color:#fff;" title="Move to Waiting on Next Season" onclick="moveShow(${show.id}, 'waiting')">Season done</button>`;
+               <button class="btn btn-small" style="background:#2980b9;color:#fff;" title="Move to Waiting on Next Showings" onclick="moveShow(${show.id}, 'waiting')">Season done</button>`;
           } else if (show.list === 'waiting') {
             quickBtns = `<button class="btn btn-small" style="background:#27ae60;color:#fff;" title="Move to Watching" onclick="moveShow(${show.id}, 'watching')">It's back!</button>`;
           } else if (show.list === 'recommending') {
