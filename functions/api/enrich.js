@@ -119,12 +119,14 @@ export async function onRequestGet(context) {
   const maxOmdb = parseInt(url.searchParams.get('max_omdb') || '50', 10);
   const maxTmdb = parseInt(url.searchParams.get('max_tmdb') || '50', 10);
 
+  // Order by most-recent change first so newly-added/edited shows enrich before older backlog.
   let query = `SELECT s.id, s.title, s.network, s.network_url, s.movie
      FROM shows s
      WHERE s.archived = 0
        AND (s.rating IS NULL
          OR s.network_url IS NULL
          OR NOT EXISTS (SELECT 1 FROM actors a WHERE a.show_id = s.id))
+     ORDER BY COALESCE(s.updated_at, s.created_at) DESC
      LIMIT ?`;
   const stmt = member
     ? env.DB.prepare(query.replace('LIMIT ?', `AND s.member_slug = '${member}' LIMIT ?`)).bind(maxOmdb)
