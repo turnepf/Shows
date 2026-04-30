@@ -67,7 +67,7 @@
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
     }
 
-    .btn-add { background: #E67E22; color: #fff; }
+    .btn-add { background: #E67E22; color: #fff; padding: 6px 12px; font-size: 18px; line-height: 1; font-weight: 600; }
     .btn-add:hover { background: #d35400; }
     .btn-search { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
     .btn-search:hover { background: rgba(255,255,255,0.25); }
@@ -419,7 +419,7 @@
         <a href="/" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 18px; margin-right: 8px;" title="All members">&#9664;</a>
         <h1 id="appTitle"></h1>
         <div class="header-actions">
-          <button class="btn btn-add hidden" id="addBtn" title="Add a new show" onclick="openAddModal()">+ Add</button>
+          <button class="btn btn-add hidden" id="addBtn" title="Add a new show" aria-label="Add a new show" onclick="openAddModal()">+</button>
           <button class="btn btn-login" id="loginBtn" title="Toggle edit mode" onclick="login()">Edit</button>
           <button class="btn btn-search" id="searchBtn" title="Search this member's shows" onclick="openSearchModal()">Search</button>
         </div>
