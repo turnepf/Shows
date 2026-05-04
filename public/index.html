@@ -189,7 +189,8 @@
     .show-actors { padding: 4px 0 8px 16px; display: none; font-size: 13px; color: #5a5a5a; }
     .show-actors.visible { display: block; }
     .actor-list { display: flex; flex-wrap: wrap; gap: 4px; }
-    .actor-tag { background: #f0ebe3; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+    .actor-tag { background: #f0ebe3; padding: 2px 8px; border-radius: 10px; font-size: 12px; text-decoration: none; color: #5a5a5a; }
+    a.actor-tag:hover { background: #e4d9cf; }
 
     .suggest-bar { text-align: center; padding: 16px 0 4px; }
     .suggest-btn {
@@ -706,10 +707,37 @@
     let authMember = null;
     let owners = '';
 
+    function parseActors(raw) {
+      if (!raw) return [];
+      try {
+        const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (Array.isArray(arr)) return arr;
+      } catch (_) {}
+      // Legacy plain string fallback
+      return String(raw).split(', ').map(name => ({ name, imdb_id: null }));
+    }
+
+    function renderActors(raw) {
+      const actors = parseActors(raw);
+      if (!actors.length) return '';
+      const tags = actors.map(a => {
+        const label = escapeHtml(a.name);
+        if (a.imdb_id) {
+          return `<a class="actor-tag" href="https://www.imdb.com/name/${encodeURIComponent(a.imdb_id)}/" target="_blank" rel="noopener">${label}</a>`;
+        }
+        return `<span class="actor-tag">${label}</span>`;
+      }).join('');
+      return `<div class="actor-list">${tags}</div>`;
+    }
+
+    function actorNamesText(raw) {
+      return parseActors(raw).map(a => a.name).join(', ');
+    }
+
     function buildDetailLines(show, opts = {}) {
       const lines = [];
       if (show.genres) lines.push(escapeHtml(show.genres));
-      if (show.actors) lines.push(escapeHtml(show.actors));
+      if (show.actors) lines.push(renderActors(show.actors));
       if (!opts.aggregate) {
         if (show.recommended_by) lines.push(`Recommended by ${escapeHtml(show.recommended_by)}`);
         if (show.next_season_date) {
@@ -1405,7 +1433,7 @@
 
       const matches = searchableShows.filter(show => {
         const titleHit = !titleQ || (show.title || '').toLowerCase().includes(titleQ);
-        const actorHit = !actorQ || (show.actors || '').toLowerCase().includes(actorQ);
+        const actorHit = !actorQ || actorNamesText(show.actors).toLowerCase().includes(actorQ);
         return titleHit && actorHit;
       });
 

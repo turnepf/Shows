@@ -1,0 +1,131 @@
+// Shared enrichment: TMDB (search + cast + actor IMDB IDs) + OMDB (IMDB rating by ID).
+// TMDB is primary. OMDB is fallback for both lookup and rating.
+
+async function tmdbFetch(path, token) {
+  const res = await fetch(`https://api.themoviedb.org/3${path}`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  return res.json();
+}
+
+async function omdbById(imdbId, apiKey) {
+  try {
+    const res = await fetch(`https://www.omdbapi.com/?i=${imdbId}&apikey=${apiKey}`);
+    const d = await res.json();
+    if (d.Response === 'True') {
+      return {
+        rating: d.imdbRating !== 'N/A' ? d.imdbRating : null,
+        canonicalTitle: d.Title || null,
+      };
+    }
+  } catch (_) {}
+  return { rating: null, canonicalTitle: null };
+}
+
+async function omdbByTitle(title, apiKey, type) {
+  async function tryTitle(t) {
+    try {
+      let url = `https://www.omdbapi.com/?t=${encodeURIComponent(t)}&apikey=${apiKey}`;
+      if (type) url += `&type=${type}`;
+      const res = await fetch(url);
+      const d = await res.json();
+      if (d.Response === 'True') return d;
+    } catch (_) {}
+    return null;
+  }
+
+  let d = await tryTitle(title);
+  if (!d) d = await tryTitle('The ' + title);
+  if (!d && title.toLowerCase().startsWith('the ')) d = await tryTitle(title.slice(4));
+
+  if (!d) {
+    try {
+      let url = `https://www.omdbapi.com/?s=${encodeURIComponent(title)}&apikey=${apiKey}`;
+      if (type) url += `&type=${type}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.Response === 'True' && data.Search?.length) {
+        const dr = await fetch(`https://www.omdbapi.com/?i=${data.Search[0].imdbID}&apikey=${apiKey}`);
+        const dd = await dr.json();
+        if (dd.Response === 'True') d = dd;
+      }
+    } catch (_) {}
+  }
+
+  if (!d) return null;
+  return {
+    imdbId: d.imdbID || null,
+    rating: d.imdbRating !== 'N/A' ? d.imdbRating : null,
+    canonicalTitle: d.Title || null,
+    actors: d.Actors && d.Actors !== 'N/A' ? d.Actors.split(', ') : [],
+  };
+}
+
+export async function fetchEnrichment(title, env, isMovie) {
+  const token = env.TMDB_TOKEN;
+  const omdbKey = env.OMDB_API_KEY;
+  const mediaType = isMovie ? 'movie' : 'tv';
+
+  // ── TMDB path ──────────────────────────────────────────────────────────────
+  if (token) {
+    try {
+      const search = await tmdbFetch(
+        `/search/${mediaType}?query=${encodeURIComponent(title)}&language=en-US&page=1`,
+        token
+      );
+
+      if (search.results?.length) {
+        const tmdbId = search.results[0].id;
+
+        // One call: details + credits + external_ids
+        const detail = await tmdbFetch(
+          `/${mediaType}/${tmdbId}?append_to_response=credits,external_ids&language=en-US`,
+          token
+        );
+
+        const imdbShowId = detail.external_ids?.imdb_id || null;
+        const canonicalTmdb = (isMovie ? detail.title : detail.name) || title;
+        const cast = (detail.credits?.cast || []).slice(0, 4);
+
+        // IMDB rating via OMDB using exact show IMDB ID (no title-guessing)
+        let rating = null;
+        let canonicalTitle = canonicalTmdb;
+        if (imdbShowId && omdbKey) {
+          const omdb = await omdbById(imdbShowId, omdbKey);
+          rating = omdb.rating;
+          if (omdb.canonicalTitle) canonicalTitle = omdb.canonicalTitle;
+        }
+
+        // Actor IMDB IDs in parallel
+        const actors = await Promise.all(
+          cast.map(async (person) => {
+            try {
+              const ext = await tmdbFetch(`/person/${person.id}/external_ids`, token);
+              return { name: person.name, imdb_id: ext.imdb_id || null };
+            } catch (_) {
+              return { name: person.name, imdb_id: null };
+            }
+          })
+        );
+
+        return { canonicalTitle, rating, actors };
+      }
+    } catch (_) {
+      // fall through to OMDB
+    }
+  }
+
+  // ── OMDB fallback ──────────────────────────────────────────────────────────
+  if (omdbKey) {
+    const result = await omdbByTitle(title, omdbKey, isMovie ? 'movie' : 'series');
+    if (result) {
+      return {
+        canonicalTitle: result.canonicalTitle,
+        rating: result.rating,
+        actors: result.actors.map(name => ({ name, imdb_id: null })),
+      };
+    }
+  }
+
+  return { canonicalTitle: null, rating: null, actors: [] };
+}

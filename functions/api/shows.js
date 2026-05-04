@@ -1,3 +1,5 @@
+import { fetchEnrichment } from '../_shared/enrichment.js';
+
 const NETWORK_SEARCH = {
   'Netflix': { base: 'https://www.netflix.com/search' },
   'HBO': { base: 'https://play.max.com/search', param: 'q' },
@@ -48,64 +50,6 @@ async function getSession(request, env) {
   return null;
 }
 
-async function tryOMDB(title, apiKey, type) {
-  try {
-    let url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${apiKey}`;
-    if (type) url += `&type=${type}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.Response === 'True') {
-      return {
-        canonicalTitle: data.Title,
-        rating: data.imdbRating !== 'N/A' ? data.imdbRating : null,
-        actors: data.Actors && data.Actors !== 'N/A' ? data.Actors.split(', ') : [],
-      };
-    }
-  } catch (e) {}
-  return null;
-}
-
-async function searchOMDB(title, apiKey, type) {
-  try {
-    let url = `https://www.omdbapi.com/?s=${encodeURIComponent(title)}&apikey=${apiKey}`;
-    if (type) url += `&type=${type}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.Response === 'True' && data.Search && data.Search.length > 0) {
-      const detailRes = await fetch(`https://www.omdbapi.com/?i=${data.Search[0].imdbID}&apikey=${apiKey}`);
-      const detail = await detailRes.json();
-      if (detail.Response === 'True') {
-        return {
-          canonicalTitle: detail.Title,
-          rating: detail.imdbRating !== 'N/A' ? detail.imdbRating : null,
-          actors: detail.Actors && detail.Actors !== 'N/A' ? detail.Actors.split(', ') : [],
-        };
-      }
-    }
-  } catch (e) {}
-  return null;
-}
-
-async function fetchOMDB(title, env, type) {
-  const apiKey = env.OMDB_API_KEY;
-  if (!apiKey) return { canonicalTitle: null, rating: null, actors: [] };
-  let result = await tryOMDB(title, apiKey, type);
-  if (result) return result;
-  result = await tryOMDB('The ' + title, apiKey, type);
-  if (result) return result;
-  if (title.toLowerCase().startsWith('the ')) {
-    result = await tryOMDB(title.slice(4), apiKey, type);
-    if (result) return result;
-  }
-  const collapsed = title.replace(/\s+/g, '');
-  if (collapsed !== title) {
-    result = await tryOMDB(collapsed, apiKey, type);
-    if (result) return result;
-  }
-  result = await searchOMDB(title, apiKey, type);
-  if (result) return result;
-  return { canonicalTitle: null, rating: null, actors: [] };
-}
 
 export async function onRequestGet(context) {
   const { env, request } = context;
@@ -119,7 +63,7 @@ export async function onRequestGet(context) {
   const archivedFilter = includeArchived ? '' : 'AND s.archived = 0';
   const { results } = await env.DB.prepare(
     `SELECT s.*,
-       (SELECT GROUP_CONCAT(name, ', ') FROM actors a WHERE a.show_id = s.id) as actors
+       (SELECT json_group_array(json_object('name', a.name, 'imdb_id', a.imdb_id)) FROM actors a WHERE a.show_id = s.id) as actors
      FROM shows s WHERE s.member_slug = ? ${archivedFilter} ORDER BY s.title COLLATE NOCASE`
   ).bind(member).all();
   return new Response(JSON.stringify({ shows: results }), { headers: corsHeaders() });
@@ -166,7 +110,7 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ error: 'Title and list are required' }), { status: 400, headers: corsHeaders() });
   }
 
-  const omdb = await fetchOMDB(title, env, movie ? 'movie' : 'series');
+  const omdb = await fetchEnrichment(title, env, !!movie);
   const finalTitle = omdb.canonicalTitle || title;
 
   const existing = await env.DB.prepare(
@@ -187,8 +131,8 @@ export async function onRequestPost(context) {
 
   const showId = result.meta.last_row_id;
   if (omdb.actors.length > 0) {
-    const stmt = env.DB.prepare('INSERT INTO actors (show_id, name) VALUES (?, ?)');
-    await env.DB.batch(omdb.actors.map(actor => stmt.bind(showId, actor)));
+    const stmt = env.DB.prepare('INSERT INTO actors (show_id, name, imdb_id) VALUES (?, ?, ?)');
+    await env.DB.batch(omdb.actors.map(a => stmt.bind(showId, a.name, a.imdb_id || null)));
   }
 
   // Backfill network/URL from other members if missing
