@@ -1,3 +1,8 @@
+// Members who should never be returned as someone else's match.
+// Why: their lists aren't curated tightly enough to represent shared taste —
+// they accumulate too many shows and drown out real matches.
+const EXCLUDED_AS_MATCH = ['paula'];
+
 export async function onRequestGet(context) {
   const { env, request } = context;
   const url = new URL(request.url);
@@ -9,6 +14,9 @@ export async function onRequestGet(context) {
     });
   }
 
+  const exclusions = [member, ...EXCLUDED_AS_MATCH.filter(s => s !== member)];
+  const placeholders = exclusions.map(() => '?').join(',');
+
   // Find the other member with the largest overlap of active titles. Ignore
   // members with fewer than 5 active shows so a tiny library can't win by
   // accident.
@@ -19,7 +27,7 @@ export async function onRequestGet(context) {
      ),
      other_counts AS (
        SELECT member_slug, COUNT(*) AS cnt FROM shows
-       WHERE archived = 0 AND member_slug != ?
+       WHERE archived = 0 AND member_slug NOT IN (${placeholders})
        GROUP BY member_slug
      )
      SELECT s.member_slug,
@@ -27,11 +35,11 @@ export async function onRequestGet(context) {
      FROM shows s
      JOIN my_titles mt ON LOWER(s.title) = mt.t
      JOIN other_counts oc ON oc.member_slug = s.member_slug
-     WHERE s.archived = 0 AND s.member_slug != ? AND oc.cnt >= 5
+     WHERE s.archived = 0 AND s.member_slug NOT IN (${placeholders}) AND oc.cnt >= 5
      GROUP BY s.member_slug
      ORDER BY match_count DESC
      LIMIT 1`
-  ).bind(member, member, member).first();
+  ).bind(member, ...exclusions, ...exclusions).first();
 
   if (!top || !top.match_count) {
     return new Response(JSON.stringify({ match: null }), {
