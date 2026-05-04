@@ -260,6 +260,34 @@
 
     .hidden { display: none !important; }
 
+    /* Member Match card */
+    .member-match-card {
+      background: #f0ebe3;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin: 0 0 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      transition: background 0.15s;
+    }
+    .member-match-card:hover { background: #e8e1d4; }
+    .member-match-label { font-size: 11px; font-weight: 600; color: #2C3E50; text-transform: uppercase; letter-spacing: 0.5px; }
+    .member-match-name { font-size: 14px; font-weight: 600; color: #E67E22; }
+    .member-match-count { font-size: 12px; color: #7f8c8d; margin-left: auto; }
+
+    .match-line { font-size: 14px; color: #2C3E50; line-height: 1.5; margin-bottom: 14px; }
+    .match-section-label { font-size: 12px; color: #7f8c8d; margin: 0 0 6px; }
+    .match-titles { list-style: none; margin: 0 0 16px; padding: 0; font-size: 13px; color: #2C3E50; line-height: 1.7; }
+    .match-titles li::before { content: "• "; color: #bdc3c7; }
+    .match-titles .match-more::before { content: ""; }
+    .match-titles .match-more { color: #95a5a6; font-style: italic; }
+    .match-link { font-size: 13px; margin: 0; }
+    .match-link a { color: #E67E22; font-weight: 600; text-decoration: none; }
+    .match-link a:hover { text-decoration: underline; }
+
     /* Landing page */
     .landing { max-width: 500px; margin: 60px auto; padding: 0 20px; text-align: center; }
     .landing h1 { font-size: 28px; color: #2C3E50; margin-bottom: 8px; }
@@ -375,6 +403,7 @@
 
       <h3 id="whats-new" style="font-size: 15px; color: #2C3E50; margin-bottom: 8px; margin-top: 24px; text-align: center;">What's New</h3>
       <div style="padding: 16px 24px; background: #f0ebe3; border-radius: 10px; font-size: 13px; color: #555; line-height: 1.8; text-align: left;">
+        <strong>5/4</strong> &mdash; <strong>Your Member Match.</strong> Visit any member's page to see who they share the most shows with. Tap the match card to see the overlapping titles and jump straight to that member's lists.<br>
         <strong>4/28</strong> &mdash; <strong>Search.</strong> Tap <strong>Search</strong> in the header on any member's page to find shows by title or actor across all four lists plus archived. Each result shows the list it's on; tap a result to expand the full details.<br>
         <strong>4/28</strong> &mdash; <strong>One-tap Add.</strong> The <strong>+ Add</strong> button now appears on your member page as soon as you're logged in &mdash; no need to click Edit first.<br>
         <strong>4/26</strong> &mdash; <strong>Cleaner show rows.</strong> Each show is now one tidy line: title, network, rating. Tap the title to expand and see genre, cast, who recommended it, next season dates, who you're watching with, and notes &mdash; only the lines with data show up.<br>
@@ -435,6 +464,11 @@
 
     <main>
       <div class="loading" id="loading">Loading shows...</div>
+      <div class="member-match-card hidden" id="memberMatchCard" onclick="openMatchModal()" role="button" tabindex="0">
+        <span class="member-match-label">Your Member Match</span>
+        <span class="member-match-name" id="memberMatchName"></span>
+        <span class="member-match-count" id="memberMatchCount"></span>
+      </div>
       <div class="show-list" id="showList"></div>
       <div class="empty hidden" id="empty">No shows in this list yet.</div>
     </main>
@@ -604,6 +638,16 @@
   </div>
 
   <!-- Search Modal -->
+  <div class="modal-overlay hidden" id="matchOverlay" onclick="closeMatchModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2 id="matchModalTitle">Your Member Match</h2>
+      <div id="matchModalBody"></div>
+      <div class="modal-actions">
+        <button class="btn btn-cancel" onclick="closeMatchModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="searchOverlay" onclick="closeSearchModal(event)">
     <div class="modal" onclick="event.stopPropagation()">
       <h2 id="searchModalTitle">Search Shows</h2>
@@ -814,6 +858,7 @@
 
       checkAuth();
       loadShows();
+      loadMemberMatch();
       fetch(`/api/enrich?member=${slug}`).catch(() => {});
       // Sync good URLs across members once per day
       const lastSync = localStorage.getItem('last_url_sync');
@@ -894,6 +939,50 @@
       } catch (e) {
         document.getElementById('loading').textContent = 'Failed to load shows.';
       }
+    }
+
+    let memberMatch = null;
+
+    async function loadMemberMatch() {
+      const card = document.getElementById('memberMatchCard');
+      card.classList.add('hidden');
+      memberMatch = null;
+      try {
+        const res = await fetch(`/api/member-match?member=${encodeURIComponent(memberSlug)}`);
+        const data = await res.json();
+        if (data.match && data.match.match_count > 0) {
+          memberMatch = data.match;
+          document.getElementById('memberMatchName').textContent = data.match.display_name;
+          const n = data.match.match_count;
+          document.getElementById('memberMatchCount').textContent = `${n} show${n === 1 ? '' : 's'} in common`;
+          card.classList.remove('hidden');
+        }
+      } catch (e) {}
+    }
+
+    function openMatchModal() {
+      if (!memberMatch) return;
+      const titleText = (document.getElementById('appTitle').textContent || '').trim();
+      const youName = titleText.replace(/'s Shows$/, '') || 'You';
+      const titles = memberMatch.titles || [];
+      const shown = titles.slice(0, 5);
+      const more = titles.length - shown.length;
+      const titlesHtml = shown.map(t => `<li>${escapeHtml(t)}</li>`).join('')
+        + (more > 0 ? `<li class="match-more">+ ${more} more</li>` : '');
+      const n = memberMatch.match_count;
+      const body = `
+        <p class="match-line"><strong>${escapeHtml(youName)}</strong> matches with <strong>${escapeHtml(memberMatch.display_name)}</strong> on <strong>${n}</strong> show${n === 1 ? '' : 's'}.</p>
+        <p class="match-section-label">Shows in common:</p>
+        <ul class="match-titles">${titlesHtml}</ul>
+        <p class="match-link"><a href="/${encodeURIComponent(memberMatch.slug)}">See ${escapeHtml(memberMatch.display_name)}'s shows &rarr;</a></p>
+      `;
+      document.getElementById('matchModalBody').innerHTML = body;
+      document.getElementById('matchOverlay').classList.remove('hidden');
+    }
+
+    function closeMatchModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('matchOverlay').classList.add('hidden');
     }
 
     const TAB_LABELS = { watching: 'Watching', waiting: 'Waiting', recommending: 'Recommending', next: 'Up Next' };
