@@ -453,6 +453,11 @@
           <button class="btn btn-search" id="searchBtn" title="Search this member's shows" onclick="openSearchModal()">Search</button>
         </div>
       </div>
+      <div class="member-match-card hidden" id="memberMatchCard" onclick="openMatchModal()" role="button" tabindex="0">
+        <span class="member-match-label">Your Member Match</span>
+        <span class="member-match-name" id="memberMatchName"></span>
+        <span class="member-match-count" id="memberMatchCount"></span>
+      </div>
       <div class="tabs" id="tabs">
         <div class="tab active" data-list="watching" onclick="switchTab('watching')">Watching</div>
         <div class="tab" data-list="waiting" onclick="switchTab('waiting')">Waiting</div>
@@ -464,11 +469,6 @@
 
     <main>
       <div class="loading" id="loading">Loading shows...</div>
-      <div class="member-match-card hidden" id="memberMatchCard" onclick="openMatchModal()" role="button" tabindex="0">
-        <span class="member-match-label">Your Member Match</span>
-        <span class="member-match-name" id="memberMatchName"></span>
-        <span class="member-match-count" id="memberMatchCount"></span>
-      </div>
       <div class="show-list" id="showList"></div>
       <div class="empty hidden" id="empty">No shows in this list yet.</div>
     </main>
