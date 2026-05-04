@@ -14,30 +14,39 @@ export async function onRequestGet(context) {
   const { env } = context;
 
   const windows = [
-    ['day', "AND created_at >= datetime('now', '-1 day')", "AND updated_at >= datetime('now', '-1 day')", "AND expires_at >= datetime(datetime('now', '-1 day'), '+30 days')"],
-    ['week', "AND created_at >= datetime('now', '-7 days')", "AND updated_at >= datetime('now', '-7 days')", "AND expires_at >= datetime(datetime('now', '-7 days'), '+30 days')"],
-    ['month', "AND created_at >= datetime('now', '-30 days')", "AND updated_at >= datetime('now', '-30 days')", "AND expires_at >= datetime(datetime('now', '-30 days'), '+30 days')"],
-    ['all_time', '', '', ''],
+    ['day', "AND created_at >= datetime('now', '-1 day')", "AND updated_at >= datetime('now', '-1 day')"],
+    ['week', "AND created_at >= datetime('now', '-7 days')", "AND updated_at >= datetime('now', '-7 days')"],
+    ['month', "AND created_at >= datetime('now', '-30 days')", "AND updated_at >= datetime('now', '-30 days')"],
+    ['all_time', '', ''],
   ];
 
   const newShows = {};
   const editedShows = {};
   const archivedShows = {};
   const newMembers = {};
-  const newSessions = {};
 
-  for (const [label, createdFilter, updatedFilter, sessionFilter] of windows) {
+  for (const [label, createdFilter, updatedFilter] of windows) {
     newShows[label] = await countOver(env,
       `SELECT COUNT(*) as cnt FROM shows WHERE archived = 0 AND created_at IS NOT NULL ${createdFilter}`);
     editedShows[label] = await countOver(env,
       `SELECT COUNT(*) as cnt FROM shows WHERE updated_at IS NOT NULL AND (created_at IS NULL OR updated_at != created_at) ${updatedFilter}`);
     archivedShows[label] = await countOver(env,
-      `SELECT COUNT(*) as cnt FROM shows WHERE archived = 1 ${updatedFilter.replace('updated_at', 'updated_at')}`);
+      `SELECT COUNT(*) as cnt FROM shows WHERE archived = 1 ${updatedFilter}`);
     newMembers[label] = await countOver(env,
-      `SELECT COUNT(*) as cnt FROM members WHERE 1=1 ${createdFilter.replace('created_at', 'created_at')}`);
-    newSessions[label] = await countOver(env,
-      `SELECT COUNT(*) as cnt FROM sessions WHERE 1=1 ${sessionFilter}`);
+      `SELECT COUNT(*) as cnt FROM members WHERE 1=1 ${createdFilter}`);
   }
+
+  // Active members = distinct logged-in members whose session pinged within
+  // the window. last_seen_at is bumped (throttled to 1/hour) on every
+  // /auth/check, so this approximates DAU/WAU/MAU for authenticated visits.
+  const activeMembers = {
+    day: await countOver(env,
+      `SELECT COUNT(DISTINCT member_slug) as cnt FROM sessions WHERE last_seen_at >= datetime('now', '-1 day')`),
+    week: await countOver(env,
+      `SELECT COUNT(DISTINCT member_slug) as cnt FROM sessions WHERE last_seen_at >= datetime('now', '-7 days')`),
+    month: await countOver(env,
+      `SELECT COUNT(DISTINCT member_slug) as cnt FROM sessions WHERE last_seen_at >= datetime('now', '-30 days')`),
+  };
 
   const totals = await env.DB.prepare(
     `SELECT
@@ -94,7 +103,7 @@ export async function onRequestGet(context) {
     edited_shows: editedShows,
     archived_shows: archivedShows,
     new_members: newMembers,
-    new_sessions: newSessions,
+    active_members: activeMembers,
     totals,
     top_networks: topNetworks,
     top_shared: topShared,

@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   email TEXT NOT NULL,
   member_slug TEXT,
   expires_at TEXT NOT NULL,
-  created_at TEXT
+  created_at TEXT,
+  last_seen_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_shows_list ON shows(list);

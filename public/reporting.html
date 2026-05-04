@@ -101,6 +101,17 @@
       </div>`;
     }
 
+    function dwmCard(title, w) {
+      return `<div class="card">
+        <h3>${title}</h3>
+        <div class="metrics">
+          <div class="metric"><div class="metric-val">${fmt(w.day)}</div><div class="metric-lbl">Day</div></div>
+          <div class="metric"><div class="metric-val">${fmt(w.week)}</div><div class="metric-lbl">Week</div></div>
+          <div class="metric"><div class="metric-val">${fmt(w.month)}</div><div class="metric-lbl">Month</div></div>
+        </div>
+      </div>`;
+    }
+
     function renderReport(d) {
       document.getElementById('generated').textContent = 'Generated ' + fmtDate(d.generated_at);
 
@@ -112,7 +123,7 @@
           ${windowCard('Edits', d.edited_shows)}
           ${windowCard('Archived', d.archived_shows)}
           ${windowCard('New members', d.new_members)}
-          ${windowCard('Logins', d.new_sessions)}
+          ${dwmCard('Active members', d.active_members || {})}
         </div>
 
         <div class="section">
