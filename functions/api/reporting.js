@@ -97,6 +97,20 @@ export async function onRequestGet(context) {
      LIMIT 15`
   ).all();
 
+  // Seed-only: every show row is an untouched seed (added_by='seed', not
+  // archived, updated_at NULL). Identifies members who haven't engaged yet.
+  const { results: seedOnly } = await env.DB.prepare(
+    `SELECT m.slug, m.first_name, m.last_initial, m.created_at,
+       (SELECT COUNT(*) FROM shows s WHERE s.member_slug = m.slug) AS show_count
+     FROM members m
+     WHERE NOT EXISTS (
+       SELECT 1 FROM shows s
+       WHERE s.member_slug = m.slug
+         AND (COALESCE(s.added_by, '') != 'seed' OR s.archived = 1 OR s.updated_at IS NOT NULL)
+     )
+     ORDER BY m.created_at DESC, m.first_name`
+  ).all();
+
   return json({
     generated_at: new Date().toISOString(),
     new_shows: newShows,
@@ -109,5 +123,6 @@ export async function onRequestGet(context) {
     top_shared: topShared,
     most_active: mostActive,
     recently_archived: recentlyArchived,
+    seed_only: seedOnly,
   });
 }

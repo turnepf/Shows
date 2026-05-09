@@ -14,6 +14,21 @@ export async function onRequestGet(context) {
     });
   }
 
+  // Suppress the match for seed-only members: their list reflects the seeder's
+  // taste, not theirs, so any "match" would be coincidental overlap of seeds.
+  const engaged = await env.DB.prepare(
+    `SELECT EXISTS(
+       SELECT 1 FROM shows s
+       WHERE s.member_slug = ?
+         AND (COALESCE(s.added_by, '') != 'seed' OR s.archived = 1 OR s.updated_at IS NOT NULL)
+     ) AS engaged`
+  ).bind(member).first();
+  if (!engaged || !engaged.engaged) {
+    return new Response(JSON.stringify({ match: null }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const exclusions = [member, ...EXCLUDED_AS_MATCH.filter(s => s !== member)];
   const placeholders = exclusions.map(() => '?').join(',');
 

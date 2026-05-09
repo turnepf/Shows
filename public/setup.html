@@ -62,6 +62,29 @@
     .msg.err { background: #ffebee; color: #b71c1c; border: 1px solid #ffcdd2; }
     .msg strong { display: block; margin-bottom: 6px; }
     .msg a { color: inherit; }
+    .intro-label { display: block; margin-top: 16px; font-weight: 600; font-size: 13px; }
+    textarea.intro {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px 12px;
+      border: 1px solid #c8e6c9;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      line-height: 1.5;
+      resize: vertical;
+      background: #fff;
+      color: #2C2C2C;
+      white-space: pre-wrap;
+    }
+    button.copy {
+      width: auto;
+      margin-top: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      background: #2C3E50;
+    }
+    button.copy:hover { background: #1a252f; }
   </style>
 </head>
 <body>
@@ -123,8 +146,50 @@
           msg.textContent = data.error || `Error (${res.status})`;
         } else {
           msg.className = 'msg ok';
+          msg.textContent = '';
+
+          const heading = document.createElement('strong');
+          heading.textContent = `Created ${data.name}`;
+          msg.appendChild(heading);
+
+          msg.append('URL: ');
+          const link = document.createElement('a');
+          link.href = data.url;
+          link.target = '_blank';
+          link.textContent = data.url;
+          msg.appendChild(link);
+
           const seedList = data.seeded.map(s => '  • ' + s).join('\n');
-          msg.innerHTML = `<strong>Created ${data.name}</strong>URL: <a href="${data.url}" target="_blank">${data.url}</a>\nCode: ${data.code}\n\nSeeded:\n${seedList}`;
+          msg.append(`\nCode: ${data.code}\n\nSeeded:\n${seedList}`);
+
+          const introLabel = document.createElement('div');
+          introLabel.className = 'intro-label';
+          introLabel.textContent = 'Intro text — copy and send:';
+          msg.appendChild(introLabel);
+
+          const ta = document.createElement('textarea');
+          ta.className = 'intro';
+          ta.rows = 12;
+          ta.readOnly = true;
+          ta.value = `Hey ${data.editor_name}! I set you up on Show Picker Club — it's a shared show tracker where we all keep track of what we're watching, what's next, and what we'd recommend. I seeded yours with some popular shows to get you started — if any don't interest you, just tap Edit, then Archive to remove them. If you have your own list of shows you'd like uploaded, share it with me and I'll get it loaded for you.\n\nYour list: **${data.url}**\n\nTo edit your list, tap Edit and enter your code: **${data.code}**\n\nYou can also browse everyone else's lists from the home page at **https://showpicker.club** — and if you see something you like on someone else's list, tap the **+** to add it to yours!`;
+          msg.appendChild(ta);
+
+          const copyBtn = document.createElement('button');
+          copyBtn.type = 'button';
+          copyBtn.className = 'copy';
+          copyBtn.textContent = 'Copy intro';
+          copyBtn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(ta.value);
+            } catch {
+              ta.select();
+              document.execCommand('copy');
+            }
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => { copyBtn.textContent = 'Copy intro'; }, 1500);
+          });
+          msg.appendChild(copyBtn);
+
           f.reset();
         }
       } catch (err) {

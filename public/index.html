@@ -385,6 +385,12 @@
       .show-row { font-size: 13px; }
       .show-actions-inline .btn-small { padding: 3px 6px; font-size: 10px; }
     }
+
+    .recs-section { margin-top: 28px; padding-top: 20px; border-top: 1px solid #ebe2d4; }
+    .recs-heading { font-size: 15px; color: #2C3E50; margin-bottom: 4px; text-align: center; }
+    .recs-explainer { font-size: 12px; color: #888; text-align: center; margin-bottom: 12px; font-style: italic; padding: 0 16px; }
+    .rec-row .rec-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    .rec-reason { font-size: 11px; color: #95a5a6; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -406,6 +412,7 @@
 
       <h3 id="whats-new" style="font-size: 15px; color: #2C3E50; margin-bottom: 8px; margin-top: 24px; text-align: center;">What's New</h3>
       <div style="padding: 16px 24px; background: #f0ebe3; border-radius: 10px; font-size: 13px; color: #555; line-height: 1.8; text-align: left;">
+        <strong>5/9</strong> &mdash; <strong>Picks for You.</strong> Log in and visit your Up Next list to see five suggestions tailored to what your closest matches are watching. Tap <strong>+</strong> on any pick to add it straight to your Up Next.<br>
         <strong>5/4</strong> &mdash; <strong>Your Member Match.</strong> Visit any member's page to see who they share the most shows with. Tap the match card to see the overlapping titles and jump straight to that member's lists.<br>
         <strong>4/28</strong> &mdash; <strong>Search.</strong> Tap <strong>Search</strong> in the header on any member's page to find shows by title or actor across all four lists plus archived. Each result shows the list it's on; tap a result to expand the full details.<br>
         <strong>4/28</strong> &mdash; <strong>One-tap Add.</strong> The <strong>+ Add</strong> button now appears on your member page as soon as you're logged in &mdash; no need to click Edit first.<br>
@@ -474,6 +481,11 @@
       <div class="loading" id="loading">Loading shows...</div>
       <div class="show-list" id="showList"></div>
       <div class="empty hidden" id="empty">No shows in this list yet.</div>
+      <div class="recs-section hidden" id="recsSection">
+        <h3 class="recs-heading">&#9733; Picks for you</h3>
+        <p class="recs-explainer" id="recsExplainer"></p>
+        <div class="show-list" id="recsList" style="text-align: left;"></div>
+      </div>
     </main>
 
     <div style="text-align: center; margin-top: 24px;">
@@ -927,6 +939,7 @@
           if (authMember && typeof memberSlug !== 'undefined' && authMember === memberSlug) {
             const addBtn = document.getElementById('addBtn');
             if (addBtn) addBtn.classList.remove('hidden');
+            loadRecs();
           }
           // Per-row Edit/Delete affordances still require clicking Edit.
         }
@@ -972,6 +985,102 @@
     }
 
     let memberMatch = null;
+    let recsData = null;
+
+    async function loadRecs() {
+      // Only load recs when the viewer is logged in as the page's member.
+      if (!authMember || authMember !== memberSlug) { recsData = null; renderRecs(); return; }
+      try {
+        const res = await fetch(`/api/recommendations?member=${encodeURIComponent(memberSlug)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        // Seed-only members get no picks shown — their list is just seeds.
+        if (data.is_seed_only) { recsData = null; renderRecs(); return; }
+        recsData = data;
+        renderRecs();
+      } catch (e) {}
+    }
+
+    function renderRecs() {
+      const section = document.getElementById('recsSection');
+      if (!section) return;
+      const visible = recsData && recsData.picks && recsData.picks.length > 0 && currentTab === 'next';
+      if (!visible) { section.classList.add('hidden'); return; }
+      section.classList.remove('hidden');
+
+      const explainer = recsData.cold_start
+        ? 'Based on shows that share actors with what you have.'
+        : `Based on what your closest matches (${recsData.neighbor_pool.map(n => escapeHtml(n.name)).join(', ')}) are watching.`;
+      document.getElementById('recsExplainer').innerHTML = explainer;
+
+      const list = document.getElementById('recsList');
+      const hasRealUrl = (url) => url && !url.includes('/search') && !url.includes('/s?') && url !== '#';
+      list.innerHTML = recsData.picks.map((p, idx) => {
+        const networkHtml = p.network
+          ? hasRealUrl(p.network_url)
+            ? ` <span class="show-on">on</span> <a class="show-network" href="${p.network_url}" target="_blank" rel="noopener">${escapeHtml(p.network)}</a>`
+            : ` <span class="show-on">on</span> <span class="show-network-plain">${escapeHtml(p.network)}</span>`
+          : '';
+        const rating = p.rating
+          ? ` <span class="show-rating"><span class="star">&#9733;</span>${escapeHtml(String(p.rating))}</span>`
+          : '';
+        let reason;
+        if (recsData.cold_start) {
+          reason = p.shared_actors > 0
+            ? `${p.shared_actors} shared actor${p.shared_actors === 1 ? '' : 's'} with your shows`
+            : 'Popular in the club';
+        } else {
+          const names = (p.who || []).map(w => escapeHtml(w.name));
+          const nameStr = names.length === 1 ? names[0]
+            : names.length === 2 ? `${names[0]} and ${names[1]}`
+            : `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+          reason = `On ${nameStr}'s list${names.length === 1 ? '' : 's'}`;
+          if (p.shared_actors > 0) reason += ` &middot; ${p.shared_actors} shared actor${p.shared_actors === 1 ? '' : 's'}`;
+        }
+        return `<div class="show-row rec-row">
+          <button class="share-btn rec-add-btn" data-rec-idx="${idx}" title="Add to my Up Next">+</button>
+          <div class="rec-info">
+            <span class="show-info"><span class="show-title">${escapeHtml(p.title)}</span>${networkHtml}${rating}</span>
+            <span class="rec-reason">${reason}</span>
+          </div>
+        </div>`;
+      }).join('');
+
+      list.querySelectorAll('.rec-add-btn').forEach(btn => {
+        btn.addEventListener('click', () => addRecToUpNext(parseInt(btn.dataset.recIdx, 10)));
+      });
+    }
+
+    async function addRecToUpNext(idx) {
+      if (!recsData || !recsData.picks[idx]) return;
+      const pick = recsData.picks[idx];
+      // Optimistic remove
+      recsData.picks.splice(idx, 1);
+      renderRecs();
+      try {
+        const res = await fetch('/api/shows', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: pick.title,
+            network: pick.network || null,
+            network_url: pick.network_url || null,
+            list: 'next',
+          }),
+        });
+        if (!res.ok && res.status !== 409) {
+          // Network/server error — restore the pick so the user can retry.
+          recsData.picks.splice(idx, 0, pick);
+          renderRecs();
+          return;
+        }
+        // 200/201 success or 409 (already on list, e.g. archived) — refresh main list.
+        await loadShows();
+      } catch (e) {
+        recsData.picks.splice(idx, 0, pick);
+        renderRecs();
+      }
+    }
 
     async function loadMemberMatch() {
       const card = document.getElementById('memberMatchCard');
@@ -1062,6 +1171,7 @@
       const loading = document.getElementById('loading');
       const empty = document.getElementById('empty');
       loading.classList.add('hidden');
+      renderRecs();
 
       const sortOrder = localStorage.getItem('sort_order') || 'rating';
       const filtered = shows.filter(s => s.list === currentTab)
