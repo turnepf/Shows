@@ -31,11 +31,17 @@
     .section { background: #fff; border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
     .section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin-bottom: 14px; font-weight: 600; }
 
-    .trait-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 14px; }
+    .trait-block { margin-bottom: 10px; }
+    .trait-row { display: flex; align-items: center; gap: 12px; font-size: 14px; }
     .trait-row .lbl { flex: 0 0 38%; color: #444; }
     .trait-row .bar-bg { flex: 1; height: 10px; background: #f0ebe3; border-radius: 5px; overflow: hidden; }
     .trait-row .bar { height: 100%; background: linear-gradient(90deg, #E67E22, #d35400); border-radius: 5px; transition: width 0.6s ease-out; }
-    .trait-row .val { flex: 0 0 36px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: #2C3E50; }
+    .trait-row .val { flex: 0 0 42px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: #2C3E50; }
+    .trait-explain { font-size: 11px; color: #95a5a6; margin: 2px 0 0 calc(38% + 12px); line-height: 1.35; }
+    @media (max-width: 480px) {
+      .trait-row .lbl { flex: 0 0 44%; font-size: 13px; }
+      .trait-explain { margin-left: 0; }
+    }
 
     .toggle-more { display: block; text-align: center; padding: 10px 0 0; background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
     .blend-note { font-size: 12px; color: #888; margin-bottom: 12px; font-style: italic; }
@@ -52,10 +58,59 @@
 
     .pick-row { padding: 10px 0; border-bottom: 1px solid #f3f3f3; font-size: 14px; }
     .pick-row:last-child { border-bottom: none; }
-    .pick-row .pick-title { font-weight: 600; color: #2C3E50; }
+    .pick-row .pick-line { display: flex; align-items: center; gap: 10px; }
+    .pick-row .pick-add {
+      flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%;
+      background: #E67E22; color: #fff; border: none; font-size: 16px; line-height: 1;
+      cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .pick-row .pick-add:hover { background: #d35400; }
+    .pick-row .pick-info { flex: 1; min-width: 0; }
+    .pick-row .pick-title { font-weight: 600; color: #2C3E50; cursor: pointer; }
+    .pick-row .pick-title:hover { color: #E67E22; }
     .pick-row .pick-network { color: #555; }
     .pick-row .pick-network a { color: #E67E22; text-decoration: none; }
     .pick-row .pick-rating { color: #95a5a6; }
+    .pick-row .pick-list-tag { color: #95a5a6; font-size: 12px; margin-left: 6px; text-transform: capitalize; }
+    .pick-detail { display: none; padding: 8px 0 4px; font-size: 13px; color: #555; line-height: 1.5; }
+    .pick-detail.open { display: block; }
+    .pick-detail .pick-detail-line { display: flex; gap: 8px; }
+    .pick-detail .pick-detail-key { color: #95a5a6; flex: 0 0 70px; }
+
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 16px;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-card {
+      background: #fff; padding: 24px; border-radius: 10px;
+      max-width: 420px; width: 100%; max-height: calc(100vh - 32px); overflow-y: auto;
+    }
+    .modal-card h2 { font-size: 18px; color: #2C3E50; margin-bottom: 4px; }
+    .modal-pick-info {
+      background: #f5f1e8; padding: 10px 12px; border-radius: 6px;
+      font-size: 13px; margin: 12px 0;
+    }
+    .modal-pick-info .modal-pick-title { font-weight: 600; color: #2C3E50; font-size: 14px; }
+    .modal-pick-info .modal-pick-meta { color: #777; margin-top: 2px; }
+    .modal-card label { display: block; font-size: 13px; font-weight: 500; margin: 12px 0 6px; color: #555; }
+    .modal-card select, .modal-card textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px;
+      font-size: 14px; font-family: inherit;
+    }
+    .modal-card select:focus, .modal-card textarea:focus { outline: none; border-color: #E67E22; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .modal-actions button {
+      flex: 1; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit; border: none;
+    }
+    .modal-actions .cancel { background: #ecf0f1; color: #2C3E50; }
+    .modal-actions .submit { background: #E67E22; color: #fff; }
+    .modal-actions .submit:hover { background: #d35400; }
+    .modal-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #addError:empty { display: none; }
+    #addError { margin-top: 10px; padding: 8px 10px; background: #ffebee; color: #b71c1c; border-radius: 6px; font-size: 12px; }
 
     .footer { text-align: center; color: #95a5a6; font-size: 12px; margin-top: 24px; }
     .empty-card { background: #fff; border-radius: 10px; padding: 32px; text-align: center; color: #888; font-size: 14px; }
@@ -73,6 +128,30 @@
     <div class="footer" id="footer"></div>
   </div>
 
+  <div class="modal-overlay hidden" id="addOverlay" onclick="closeAddModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <h2>Add to my list</h2>
+      <div class="modal-pick-info">
+        <div class="modal-pick-title" id="addTitle"></div>
+        <div class="modal-pick-meta" id="addMeta"></div>
+      </div>
+      <label for="addList">Which list?</label>
+      <select id="addList">
+        <option value="next">Up Next</option>
+        <option value="watching">Watching</option>
+        <option value="waiting">Waiting</option>
+        <option value="recommending">Recommending</option>
+      </select>
+      <label for="addNotes">Notes (optional)</label>
+      <textarea id="addNotes" rows="2" placeholder="e.g. Started season 2 already"></textarea>
+      <div class="modal-actions">
+        <button type="button" class="cancel" onclick="closeAddModal()">Cancel</button>
+        <button type="button" class="submit" id="addSubmitBtn" onclick="submitAdd()">Add</button>
+      </div>
+      <div id="addError"></div>
+    </div>
+  </div>
+
   <script>
     function escapeHtml(s) {
       return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
@@ -83,6 +162,67 @@
     }
 
     const TOP_TRAITS = ['Complexity', 'Warmth', 'Curiosity', 'Empathy'];
+
+    // Plain-English explanations for each display trait. Higher = more of it.
+    const TRAIT_EXPLAIN = {
+      'Warmth': 'How much affection, found-family, and comfort your shows lean into.',
+      'Empathy': 'How much your taste rewards understanding other people’s inner lives.',
+      'Complexity': 'Moral ambiguity, dense plotting, and prestige-drama feel.',
+      'Cynicism risk': 'Distrustful, mean-humored, or nihilistic energy.',
+      'Power orientation': 'Interest in hierarchies, status games, manipulation.',
+      'Curiosity': 'Ideas, puzzles, intellectual depth, learning.',
+      'Healing & growth': 'Characters working through wounds and finding redemption.',
+      'Chaos tolerance': 'Comfort with unpredictable, anarchic, big-swing storytelling.',
+      'Humor (warm vs cruel)': '0 = humor at others’ expense, 100 = humor that’s kind.',
+      'Optimism': 'Hopeful, life-affirming worldview vs. bleak.',
+    };
+
+    const BLEND_EXPLAIN = {
+      'Curious Omnivore': 'Watches broadly across prestige, comedy, and comfort.',
+      'Warm Comfort Viewer': 'Found-family, soft-blanket shows; low on darkness.',
+      'Prestige Drama Loyalist': 'Slow burns, ambitious craft, morally ambiguous leads.',
+      'Dark Complexity Seeker': 'Heavy themes with empathy underneath, not nihilism.',
+      'Satirical Cynic': 'Sharp irony at the expense of the powerful.',
+      'Power Game Watcher': 'Status, scheming, who-controls-whom.',
+      'Chaos Goblin': 'Unhinged, absurd, emotionally chaotic. Big swings.',
+      'Empathy & Healing Viewer': 'Emotional repair, redemption, chosen family.',
+    };
+
+    let authMember = null;     // slug of the logged-in viewer (or null)
+    let pageMember = null;     // slug of the member whose vibe we're viewing
+    let currentPicks = [];     // both aligned + outlier; indexed by data-pick-key
+
+    function renderPickRow(p, key, opts) {
+      const showAdd = opts.canAdd;
+      const link = p.network_url
+        ? `<a href="${escapeHtml(p.network_url)}" target="_blank" rel="noopener">${escapeHtml(p.network || fmtUrl(p.network_url))}</a>`
+        : escapeHtml(p.network || '');
+      const rating = p.rating ? ` &middot; <span class="pick-rating">&#9733;${escapeHtml(p.rating)}</span>` : '';
+      const listTag = p.list ? ` <span class="pick-list-tag">(${escapeHtml(p.list === 'next' ? 'Up Next' : p.list)})</span>` : '';
+
+      const detailLines = [];
+      if (p.genres) detailLines.push(`<div class="pick-detail-line"><span class="pick-detail-key">Genre:</span><span>${escapeHtml(p.genres)}</span></div>`);
+      if (p.actors && p.actors.length) detailLines.push(`<div class="pick-detail-line"><span class="pick-detail-key">Cast:</span><span>${escapeHtml(p.actors.join(', '))}</span></div>`);
+      const detailHtml = detailLines.length
+        ? `<div class="pick-detail" id="pick-detail-${key}">${detailLines.join('')}</div>`
+        : '';
+
+      const addBtn = showAdd
+        ? `<button class="pick-add" data-pick-key="${key}" title="Add to my list" aria-label="Add to my list">+</button>`
+        : '';
+
+      return `<div class="pick-row">
+        <div class="pick-line">
+          ${addBtn}
+          <div class="pick-info">
+            <span class="pick-title" data-pick-key="${key}">${escapeHtml(p.title)}</span>${listTag}
+            ${link ? ` <span class="pick-network">on ${link}</span>` : ''}
+            ${rating}
+          </div>
+        </div>
+        ${detailHtml}
+      </div>`;
+    }
 
     function renderMember(m) {
       if (m.excluded) {
@@ -102,10 +242,13 @@
       const rest = traitOrder.filter(t => !top.includes(t));
 
       const traitBars = (names) => names.map(name => `
-        <div class="trait-row">
-          <span class="lbl">${escapeHtml(name)}</span>
-          <div class="bar-bg"><div class="bar" style="width:${traits[name]}%;"></div></div>
-          <span class="val">${traits[name]}</span>
+        <div class="trait-block">
+          <div class="trait-row">
+            <span class="lbl">${escapeHtml(name)}</span>
+            <div class="bar-bg"><div class="bar" style="width:${traits[name]}%;"></div></div>
+            <span class="val">${traits[name]}</span>
+          </div>
+          ${TRAIT_EXPLAIN[name] ? `<div class="trait-explain">${escapeHtml(TRAIT_EXPLAIN[name])}</div>` : ''}
         </div>
       `).join('');
 
@@ -114,24 +257,33 @@
         : b.warmth_darkness_label === 'Warmth-leaning' ? 'warm'
         : '';
 
-      const picks = (m.aligned_picks || []).map(p => {
-        const link = p.network_url
-          ? `<a href="${escapeHtml(p.network_url)}" target="_blank" rel="noopener">${escapeHtml(p.network || fmtUrl(p.network_url))}</a>`
-          : escapeHtml(p.network || '');
-        const rating = p.rating ? ` &middot; <span class="pick-rating">&#9733;${escapeHtml(p.rating)}</span>` : '';
-        return `<div class="pick-row">
-          <span class="pick-title">${escapeHtml(p.title)}</span>
-          ${link ? ` <span class="pick-network">on ${link}</span>` : ''}
-          ${rating}
-        </div>`;
+      const isOwnPage = !!authMember && authMember === m.slug;
+
+      // Track picks globally so the modal can pull data by key.
+      currentPicks = [];
+      const pickKey = (idx, kind) => `${kind}-${idx}`;
+
+      const aligned = (m.aligned_picks || []).map((p, i) => {
+        const key = pickKey(i, 'aligned');
+        currentPicks.push({ key, data: p });
+        return renderPickRow(p, key, { canAdd: isOwnPage });
       }).join('') || '<div class="pick-row" style="color:#aaa;">No aligned picks available.</div>';
+
+      const outliers = (m.outlier_picks || []).map((p, i) => {
+        const key = pickKey(i, 'outlier');
+        currentPicks.push({ key, data: p });
+        return renderPickRow(p, key, { canAdd: false });
+      }).join('') || '<div class="pick-row" style="color:#aaa;">Not enough scored shows to find outliers.</div>';
 
       const blendRows = (c.blend || []).map(b => {
         const pct = Math.max(0, Math.round(b.similarity * 100));
-        return `<div class="trait-row">
-          <span class="lbl">${escapeHtml(b.name)}</span>
-          <div class="bar-bg"><div class="bar" style="width:${pct}%;"></div></div>
-          <span class="val">${pct}%</span>
+        return `<div class="trait-block">
+          <div class="trait-row">
+            <span class="lbl">${escapeHtml(b.name)}</span>
+            <div class="bar-bg"><div class="bar" style="width:${pct}%;"></div></div>
+            <span class="val">${pct}%</span>
+          </div>
+          ${BLEND_EXPLAIN[b.name] ? `<div class="trait-explain">${escapeHtml(BLEND_EXPLAIN[b.name])}</div>` : ''}
         </div>`;
       }).join('');
 
@@ -152,7 +304,7 @@
         <div class="section">
           <h2>Top signals</h2>
           ${traitBars(top)}
-        </div>` ;
+        </div>
 
         <div class="section">
           <h2>Full profile</h2>
@@ -166,6 +318,7 @@
             <div class="balance-item">
               <div class="lbl">Warmth vs darkness</div>
               <div class="val-row"><span class="pill ${wdPillClass}">${escapeHtml(b.warmth_darkness_label)}</span></div>
+              <div class="trait-explain" style="margin-left:0;">Whether your taste tilts warm, dark, or stays balanced.</div>
             </div>
             <div class="balance-item">
               <div class="lbl">Range across genres</div>
@@ -173,15 +326,106 @@
                 <div class="bar-bg" style="flex:1;"><div class="bar" style="width:${b.range}%;"></div></div>
                 <span class="val">${b.range}</span>
               </div>
+              <div class="trait-explain" style="margin-left:0;">How varied your trait fingerprint is — higher = wider range of moods and styles.</div>
             </div>
           </div>
         </div>
 
         <div class="section">
           <h2>Shows aligned with your vibe</h2>
-          ${picks}
+          <p class="blend-note">Trait-similarity picks from across the club — closest in mood to your fingerprint.</p>
+          ${aligned}
+        </div>
+
+        <div class="section">
+          <h2>Shows that don't make sense</h2>
+          <p class="blend-note">Shows already on this list whose trait pattern is the *opposite* of the fingerprint — outliers in the member's own taste.</p>
+          ${outliers}
         </div>
       `;
+    }
+
+    function bindPickInteractions() {
+      document.querySelectorAll('.pick-title').forEach(el => {
+        el.addEventListener('click', () => {
+          const key = el.dataset.pickKey;
+          const detail = document.getElementById(`pick-detail-${key}`);
+          if (detail) detail.classList.toggle('open');
+        });
+      });
+      document.querySelectorAll('.pick-add').forEach(btn => {
+        btn.addEventListener('click', () => openAddModal(btn.dataset.pickKey));
+      });
+    }
+
+    function openAddModal(key) {
+      const entry = currentPicks.find(p => p.key === key);
+      if (!entry) return;
+      const p = entry.data;
+      document.getElementById('addTitle').textContent = p.title;
+      const meta = [];
+      if (p.network) meta.push(p.network);
+      if (p.rating) meta.push(`★ ${p.rating}`);
+      if (p.genres) meta.push(p.genres);
+      document.getElementById('addMeta').textContent = meta.join(' · ');
+      document.getElementById('addList').value = 'next';
+      document.getElementById('addNotes').value = '';
+      document.getElementById('addError').textContent = '';
+      document.getElementById('addSubmitBtn').disabled = false;
+      document.getElementById('addSubmitBtn').dataset.pickKey = key;
+      document.getElementById('addOverlay').classList.remove('hidden');
+    }
+
+    function closeAddModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('addOverlay').classList.add('hidden');
+    }
+
+    async function submitAdd() {
+      const btn = document.getElementById('addSubmitBtn');
+      const errBox = document.getElementById('addError');
+      const key = btn.dataset.pickKey;
+      const entry = currentPicks.find(p => p.key === key);
+      if (!entry) { closeAddModal(); return; }
+      const p = entry.data;
+      const list = document.getElementById('addList').value;
+      const notes = document.getElementById('addNotes').value.trim();
+      btn.disabled = true;
+      errBox.textContent = '';
+      try {
+        const res = await fetch('/api/shows', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: p.title,
+            network: p.network || null,
+            network_url: p.network_url || null,
+            list,
+            notes: notes || null,
+          }),
+        });
+        if (!res.ok) {
+          let msg = `Error (${res.status})`;
+          try {
+            const data = await res.json();
+            if (data.error === 'exists_archived') msg = 'You archived this once already — unarchive from your list.';
+            else if (data.error === 'exists_active') msg = `Already on your ${data.list} list.`;
+            else if (data.error) msg = data.error;
+          } catch {}
+          errBox.textContent = msg;
+          btn.disabled = false;
+          return;
+        }
+        // Success — remove the row from the page and close.
+        document.querySelectorAll(`[data-pick-key="${key}"]`).forEach(el => {
+          const row = el.closest('.pick-row');
+          if (row) row.remove();
+        });
+        closeAddModal();
+      } catch (e) {
+        errBox.textContent = 'Network error. Try again.';
+        btn.disabled = false;
+      }
     }
 
     function bindToggle() {
@@ -225,8 +469,10 @@
           return;
         }
 
+        pageMember = data.member.slug || null;
         content.innerHTML = renderMember(data.member);
         bindToggle();
+        bindPickInteractions();
 
         if (data.member.scored_count != null && data.member.active_count != null) {
           footer.textContent = `Computed from ${data.member.scored_count} of ${data.member.active_count} active shows.`;
@@ -241,20 +487,19 @@
       load(e.target.value);
     });
 
-    // On first load: read ?member= from URL, else check /auth/check, else default to patrick.
+    // On first load: identify the viewer (so the +Add button can decide whether
+    // to render), then pick a default member to display.
     (async () => {
+      try {
+        const r = await fetch('/auth/check');
+        if (r.ok) {
+          const d = await r.json();
+          if (d.authenticated && d.member) authMember = d.member;
+        }
+      } catch {}
+
       const params = new URLSearchParams(window.location.search);
-      let slug = params.get('member');
-      if (!slug) {
-        try {
-          const r = await fetch('/auth/check');
-          if (r.ok) {
-            const d = await r.json();
-            if (d.authenticated && d.member) slug = d.member;
-          }
-        } catch {}
-      }
-      if (!slug) slug = 'patrick';
+      let slug = params.get('member') || authMember || 'patrick';
       load(slug);
     })();
   </script>

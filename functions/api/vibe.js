@@ -154,10 +154,53 @@ function alignedPicks(memberFp, candidatesScored, memberTitleSet) {
   ranked.sort((a, b) => b.sim - a.sim);
   return ranked.slice(0, 3).map(({ row }) => ({
     title: row.title,
+    title_lower: row.title_lower,
     network: row.network,
     network_url: row.network_url,
     rating: row.rating,
   }));
+}
+
+function outlierPicks(memberFp, scoredRows) {
+  // Shows the member has whose trait vector points opposite to their fingerprint.
+  // We use centered cosine sim so it reflects deviation from their average.
+  const memberCentered = centerFp(memberFp);
+  const ranked = [];
+  for (const r of scoredRows) {
+    if (!r.title_lower) continue;
+    const fpR = {};
+    for (const t of TRAIT_NAMES) fpR[t] = r[t];
+    const sim = cosineSim(memberCentered, centerFp(fpR));
+    ranked.push({ row: r, sim });
+  }
+  ranked.sort((a, b) => a.sim - b.sim);
+  return ranked.slice(0, 3).map(({ row }) => ({
+    title: row.title,
+    title_lower: row.title_lower,
+    list: row.list,
+    network: row.network,
+    network_url: row.network_url,
+    rating: row.rating,
+  }));
+}
+
+async function enrichPick(env, p) {
+  const genreRow = await env.DB.prepare(
+    `SELECT genres FROM shows
+     WHERE LOWER(title) = ? AND archived = 0 AND genres IS NOT NULL AND genres != ''
+     ORDER BY id LIMIT 1`
+  ).bind(p.title_lower).first();
+  p.genres = genreRow ? genreRow.genres : null;
+
+  const { results: actors } = await env.DB.prepare(
+    `SELECT a.name FROM actors a
+     JOIN shows s ON s.id = a.show_id
+     WHERE LOWER(s.title) = ? AND s.archived = 0
+     GROUP BY a.name
+     ORDER BY MIN(a.id)
+     LIMIT 5`
+  ).bind(p.title_lower).all();
+  p.actors = actors.map(a => a.name);
 }
 
 export async function onRequestGet(context) {
@@ -201,7 +244,7 @@ export async function onRequestGet(context) {
   const traitCols = TRAIT_NAMES.map(t => `t.${t}`).join(', ');
 
   const { results: rows } = await env.DB.prepare(
-    `SELECT s.list, s.title, t.title_lower, ${traitCols}
+    `SELECT s.list, s.title, s.network, s.network_url, s.rating, t.title_lower, ${traitCols}
      FROM shows s
      LEFT JOIN show_traits t ON LOWER(s.title) = t.title_lower AND (t.unknown_show = 0 OR t.unknown_show IS NULL)
      WHERE s.member_slug = ? AND s.archived = 0`
@@ -243,6 +286,11 @@ export async function onRequestGet(context) {
 
   const memberTitleSet = new Set(scoredRows.map(r => r.title_lower));
   const picks = alignedPicks(fp, allScored, memberTitleSet);
+  const outliers = outlierPicks(fp, scoredRows);
+
+  for (const p of [...picks, ...outliers]) {
+    await enrichPick(env, p);
+  }
 
   return new Response(JSON.stringify({
     members,
@@ -255,6 +303,7 @@ export async function onRequestGet(context) {
       display_traits: displayTraits(fp),
       balance: balanceMetrics(fp),
       aligned_picks: picks,
+      outlier_picks: outliers,
     },
   }), { headers: corsHeaders() });
 }
