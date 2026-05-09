@@ -38,6 +38,7 @@
     .trait-row .val { flex: 0 0 36px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: #2C3E50; }
 
     .toggle-more { display: block; text-align: center; padding: 10px 0 0; background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .blend-note { font-size: 12px; color: #888; margin-bottom: 12px; font-style: italic; }
 
     .balance-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
     .balance-item .lbl { font-size: 13px; color: #555; margin-bottom: 4px; }
@@ -125,18 +126,33 @@
         </div>`;
       }).join('') || '<div class="pick-row" style="color:#aaa;">No aligned picks available.</div>';
 
+      const blendRows = (c.blend || []).map(b => {
+        const pct = Math.max(0, Math.round(b.similarity * 100));
+        return `<div class="trait-row">
+          <span class="lbl">${escapeHtml(b.name)}</span>
+          <div class="bar-bg"><div class="bar" style="width:${pct}%;"></div></div>
+          <span class="val">${pct}%</span>
+        </div>`;
+      }).join('');
+
       return `
         <div class="hero">
           <div class="star">&#9733; &#9733; &#9733;</div>
           <div class="cluster-name">${escapeHtml(c.name)}</div>
           <div class="cluster-tag">"${escapeHtml(c.tagline)}"</div>
-          <div class="similarity">${c.similarity ? Math.round(c.similarity * 100) : 0}% match to this cluster</div>
+          <div class="similarity">Primary cluster &middot; ${c.similarity ? Math.round(c.similarity * 100) : 0}% match</div>
+        </div>
+
+        <div class="section">
+          <h2>Your blend</h2>
+          <p class="blend-note">Taste isn't single-axis. Here are the three clusters that best fit your fingerprint:</p>
+          ${blendRows}
         </div>
 
         <div class="section">
           <h2>Top signals</h2>
           ${traitBars(top)}
-        </div>
+        </div>` ;
 
         <div class="section">
           <h2>Full profile</h2>

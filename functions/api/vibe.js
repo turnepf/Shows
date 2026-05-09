@@ -72,13 +72,37 @@ function cosineSim(a, b) {
   return dot / Math.sqrt(na * nb);
 }
 
+// Center a fingerprint by subtracting its own mean. With centered vectors,
+// cosine similarity becomes Pearson correlation — it measures how each
+// trait *deviates* from the member's average, not absolute direction.
+// This is the right thing for cluster matching: most members' lists have
+// similar absolute shapes, so we need to compare patterns of deviation.
+function centerFp(fp) {
+  const values = TRAIT_NAMES.map(t => fp[t] || 0);
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const out = {};
+  for (const t of TRAIT_NAMES) out[t] = (fp[t] || 0) - mean;
+  return out;
+}
+
 function pickCluster(fp) {
-  let best = CLUSTERS[0], bestSim = -1;
-  for (const c of CLUSTERS) {
-    const sim = cosineSim(fp, c.target);
-    if (sim > bestSim) { best = c; bestSim = sim; }
-  }
-  return { id: best.id, name: best.name, tagline: best.tagline, similarity: bestSim };
+  const memberCentered = centerFp(fp);
+  const ranked = CLUSTERS.map(c => ({
+    cluster: c,
+    sim: cosineSim(memberCentered, centerFp(c.target)),
+  })).sort((a, b) => b.sim - a.sim);
+  const best = ranked[0];
+  return {
+    id: best.cluster.id,
+    name: best.cluster.name,
+    tagline: best.cluster.tagline,
+    similarity: best.sim,
+    blend: ranked.slice(0, 3).map(r => ({
+      id: r.cluster.id,
+      name: r.cluster.name,
+      similarity: r.sim,
+    })),
+  };
 }
 
 function avg(...xs) { return xs.reduce((a, b) => a + b, 0) / xs.length; }
