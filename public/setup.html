@@ -107,6 +107,28 @@
   </div>
 
   <script>
+    const SECRET_STORE_KEY = 'admin_secret_remember';
+    const SECRET_TTL_MS = 30 * 86400000;
+    function loadSavedSecret() {
+      try {
+        const raw = localStorage.getItem(SECRET_STORE_KEY);
+        if (!raw) return;
+        const obj = JSON.parse(raw);
+        if (obj && obj.expires > Date.now() && obj.secret) {
+          document.getElementById('secret').value = obj.secret;
+        } else {
+          localStorage.removeItem(SECRET_STORE_KEY);
+        }
+      } catch {}
+    }
+    function rememberSecret(s) {
+      try { localStorage.setItem(SECRET_STORE_KEY, JSON.stringify({ secret: s, expires: Date.now() + SECRET_TTL_MS })); } catch {}
+    }
+    function forgetSecret() {
+      try { localStorage.removeItem(SECRET_STORE_KEY); } catch {}
+    }
+    document.addEventListener('DOMContentLoaded', loadSavedSecret);
+
     const f = document.getElementById('f');
     const btn = document.getElementById('go');
     const msg = document.getElementById('msg');
@@ -142,9 +164,11 @@
         });
         const data = await res.json();
         if (!res.ok) {
+          if (res.status === 401) forgetSecret();
           msg.className = 'msg err';
           msg.textContent = data.error || `Error (${res.status})`;
         } else {
+          rememberSecret(body.secret);
           msg.className = 'msg ok';
           msg.textContent = '';
 

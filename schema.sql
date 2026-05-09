@@ -47,6 +47,21 @@ CREATE TABLE IF NOT EXISTS sessions (
   last_seen_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS show_traits (
+  title_lower TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  warmth REAL, empathy REAL, emotional_repair REAL, moral_ambiguity REAL,
+  darkness REAL, cynicism REAL, manipulation REAL, power_orientation REAL,
+  chaos_intensity REAL, humor_warmth REAL, cruel_humor REAL,
+  intellectual_curiosity REAL, growth_orientation REAL, violence_intensity REAL,
+  comfort_coziness REAL, community_belonging REAL, satire REAL,
+  prestige_energy REAL, emotional_volatility REAL, healing_redemption REAL,
+  revenge_energy REAL, status_obsession REAL, optimism REAL, nihilism REAL,
+  teamwork REAL, absurdism REAL,
+  unknown_show INTEGER DEFAULT 0,
+  generated_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_shows_list ON shows(list);
 CREATE INDEX IF NOT EXISTS idx_shows_archived ON shows(archived);
 CREATE INDEX IF NOT EXISTS idx_shows_member ON shows(member_slug);

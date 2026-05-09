@@ -135,7 +135,25 @@
   </div>
 
   <script>
-    const SS_KEY = 'urlCleanupSecret';
+    const SECRET_STORE_KEY = 'admin_secret_remember';
+    const SECRET_TTL_MS = 30 * 86400000;
+    function loadSavedSecret() {
+      try {
+        const raw = localStorage.getItem(SECRET_STORE_KEY);
+        if (!raw) return '';
+        const obj = JSON.parse(raw);
+        if (obj && obj.expires > Date.now() && obj.secret) return obj.secret;
+        localStorage.removeItem(SECRET_STORE_KEY);
+      } catch {}
+      return '';
+    }
+    function rememberSecret(s) {
+      try { localStorage.setItem(SECRET_STORE_KEY, JSON.stringify({ secret: s, expires: Date.now() + SECRET_TTL_MS })); } catch {}
+    }
+    function forgetSecret() {
+      try { localStorage.removeItem(SECRET_STORE_KEY); } catch {}
+    }
+
     const el = (id) => document.getElementById(id);
     const login = el('login');
     const secretInput = el('secret');
@@ -145,7 +163,7 @@
     const remaining = el('remaining');
     const bannerErr = el('bannerErr');
 
-    let secret = sessionStorage.getItem(SS_KEY) || '';
+    let secret = loadSavedSecret();
     let networks = [];
 
     if (secret) {
@@ -156,7 +174,7 @@
     loginBtn.addEventListener('click', () => {
       secret = secretInput.value.trim();
       if (!secret) return;
-      sessionStorage.setItem(SS_KEY, secret);
+      rememberSecret(secret);
       loadList();
     });
     secretInput.addEventListener('keydown', (e) => {
@@ -292,7 +310,7 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           if (res.status === 401) {
-            sessionStorage.removeItem(SS_KEY);
+            forgetSecret();
             secret = '';
             login.style.display = 'block';
             loginMsg.innerHTML = `<div style="margin-top:10px;padding:10px;background:#ffebee;border:1px solid #ffcdd2;border-radius:6px;color:#b71c1c;font-size:13px;">${escapeHtml(data.error || 'Invalid secret')}</div>`;

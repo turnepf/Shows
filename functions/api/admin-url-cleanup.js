@@ -1,3 +1,5 @@
+import { EXCLUDED_FROM_TASTE } from '../_shared/excluded-members.js';
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -5,9 +7,10 @@ function json(data, status = 200) {
   });
 }
 
+const EXCLUDED_SQL = EXCLUDED_FROM_TASTE.map(s => `'${s}'`).join(',');
 const QUEUE_FILTER = `
   s.archived = 0
-  AND s.member_slug != 'paula'
+  AND s.member_slug NOT IN (${EXCLUDED_SQL})
   AND (s.network_url IS NULL
        OR s.network_url LIKE '%search%'
        OR s.network_url LIKE '%/s?%'

@@ -1,3 +1,7 @@
+import { EXCLUDED_FROM_TASTE } from '../_shared/excluded-members.js';
+
+const EXCLUDED_SQL = EXCLUDED_FROM_TASTE.map(s => `'${s}'`).join(',');
+
 export async function onRequestGet(context) {
   const { env } = context;
 
@@ -9,6 +13,7 @@ export async function onRequestGet(context) {
        GROUP_CONCAT(DISTINCT s.member_slug) as member_slugs
      FROM shows s
      WHERE s.archived = 0 AND s.list = 'watching'
+       AND s.member_slug NOT IN (${EXCLUDED_SQL})
      GROUP BY LOWER(s.title)
      HAVING COUNT(DISTINCT s.member_slug) >= 2
      ORDER BY member_count DESC, CAST(s.rating AS REAL) DESC

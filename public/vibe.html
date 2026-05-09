@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe — Show Picker Club</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #FBF5EB; color: #2C2C2C; min-height: 100vh; padding: 24px 16px 60px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .topbar a.back { color: #95a5a6; text-decoration: none; font-size: 22px; }
+    .topbar h1 { font-size: 20px; color: #2C3E50; flex: 0 0 auto; }
+    .topbar select {
+      flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+      font-size: 15px; background: #fff; font-family: inherit;
+    }
+
+    .hero {
+      background: #fff; border-radius: 12px; padding: 32px 24px; text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 20px;
+    }
+    .hero .star { color: #E67E22; font-size: 14px; letter-spacing: 2px; }
+    .hero .cluster-name { font-size: 28px; color: #2C3E50; margin: 8px 0 12px; font-weight: 700; }
+    .hero .cluster-tag { color: #555; font-size: 15px; line-height: 1.5; max-width: 540px; margin: 0 auto; font-style: italic; }
+    .hero .similarity { color: #95a5a6; font-size: 12px; margin-top: 14px; }
+
+    .section { background: #fff; border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin-bottom: 14px; font-weight: 600; }
+
+    .trait-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 14px; }
+    .trait-row .lbl { flex: 0 0 38%; color: #444; }
+    .trait-row .bar-bg { flex: 1; height: 10px; background: #f0ebe3; border-radius: 5px; overflow: hidden; }
+    .trait-row .bar { height: 100%; background: linear-gradient(90deg, #E67E22, #d35400); border-radius: 5px; transition: width 0.6s ease-out; }
+    .trait-row .val { flex: 0 0 36px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; color: #2C3E50; }
+
+    .toggle-more { display: block; text-align: center; padding: 10px 0 0; background: none; border: none; color: #E67E22; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+    .balance-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .balance-item .lbl { font-size: 13px; color: #555; margin-bottom: 4px; }
+    .balance-item .val-row { display: flex; align-items: center; gap: 10px; }
+    .balance-item .pill {
+      display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px;
+      background: #f0ebe3; color: #2C3E50; font-weight: 600;
+    }
+    .balance-item .pill.dark { background: #2c3e50; color: #fff; }
+    .balance-item .pill.warm { background: #ffe4cc; color: #8b3e0d; }
+
+    .pick-row { padding: 10px 0; border-bottom: 1px solid #f3f3f3; font-size: 14px; }
+    .pick-row:last-child { border-bottom: none; }
+    .pick-row .pick-title { font-weight: 600; color: #2C3E50; }
+    .pick-row .pick-network { color: #555; }
+    .pick-row .pick-network a { color: #E67E22; text-decoration: none; }
+    .pick-row .pick-rating { color: #95a5a6; }
+
+    .footer { text-align: center; color: #95a5a6; font-size: 12px; margin-top: 24px; }
+    .empty-card { background: #fff; border-radius: 10px; padding: 32px; text-align: center; color: #888; font-size: 14px; }
+    .err { color: #b71c1c; font-size: 13px; text-align: center; padding: 20px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <a class="back" href="/" title="Home">&#9664;</a>
+      <h1>Vibe &mdash;</h1>
+      <select id="memberSelect" aria-label="Pick a member"></select>
+    </div>
+    <div id="content"><div class="empty-card">Loading&hellip;</div></div>
+    <div class="footer" id="footer"></div>
+  </div>
+
+  <script>
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+    }
+    function fmtUrl(u) {
+      if (!u) return '';
+      try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; }
+    }
+
+    const TOP_TRAITS = ['Complexity', 'Warmth', 'Curiosity', 'Empathy'];
+
+    function renderMember(m) {
+      if (m.excluded) {
+        return `<div class="empty-card">${escapeHtml(m.name)}'s list isn't used for taste-based features.</div>`;
+      }
+      if (m.is_seed_only) {
+        return `<div class="empty-card">${escapeHtml(m.name)} hasn't engaged with their list yet — no fingerprint to compute.</div>`;
+      }
+      if (m.no_fingerprint) {
+        return `<div class="empty-card">No scored shows on ${escapeHtml(m.name)}'s list yet. Once trait data fills in, a fingerprint will appear here.</div>`;
+      }
+
+      const c = m.cluster;
+      const traits = m.display_traits;
+      const traitOrder = Object.keys(traits);
+      const top = TOP_TRAITS.filter(t => t in traits);
+      const rest = traitOrder.filter(t => !top.includes(t));
+
+      const traitBars = (names) => names.map(name => `
+        <div class="trait-row">
+          <span class="lbl">${escapeHtml(name)}</span>
+          <div class="bar-bg"><div class="bar" style="width:${traits[name]}%;"></div></div>
+          <span class="val">${traits[name]}</span>
+        </div>
+      `).join('');
+
+      const b = m.balance;
+      const wdPillClass = b.warmth_darkness_label === 'Tilted dark' ? 'dark'
+        : b.warmth_darkness_label === 'Warmth-leaning' ? 'warm'
+        : '';
+
+      const picks = (m.aligned_picks || []).map(p => {
+        const link = p.network_url
+          ? `<a href="${escapeHtml(p.network_url)}" target="_blank" rel="noopener">${escapeHtml(p.network || fmtUrl(p.network_url))}</a>`
+          : escapeHtml(p.network || '');
+        const rating = p.rating ? ` &middot; <span class="pick-rating">&#9733;${escapeHtml(p.rating)}</span>` : '';
+        return `<div class="pick-row">
+          <span class="pick-title">${escapeHtml(p.title)}</span>
+          ${link ? ` <span class="pick-network">on ${link}</span>` : ''}
+          ${rating}
+        </div>`;
+      }).join('') || '<div class="pick-row" style="color:#aaa;">No aligned picks available.</div>';
+
+      return `
+        <div class="hero">
+          <div class="star">&#9733; &#9733; &#9733;</div>
+          <div class="cluster-name">${escapeHtml(c.name)}</div>
+          <div class="cluster-tag">"${escapeHtml(c.tagline)}"</div>
+          <div class="similarity">${c.similarity ? Math.round(c.similarity * 100) : 0}% match to this cluster</div>
+        </div>
+
+        <div class="section">
+          <h2>Top signals</h2>
+          ${traitBars(top)}
+        </div>
+
+        <div class="section">
+          <h2>Full profile</h2>
+          <div id="restTraits" style="display:none;">${traitBars(rest)}</div>
+          <button class="toggle-more" id="toggleMore" type="button">Show all traits &#9660;</button>
+        </div>
+
+        <div class="section">
+          <h2>Balance read</h2>
+          <div class="balance-grid">
+            <div class="balance-item">
+              <div class="lbl">Warmth vs darkness</div>
+              <div class="val-row"><span class="pill ${wdPillClass}">${escapeHtml(b.warmth_darkness_label)}</span></div>
+            </div>
+            <div class="balance-item">
+              <div class="lbl">Range across genres</div>
+              <div class="val-row">
+                <div class="bar-bg" style="flex:1;"><div class="bar" style="width:${b.range}%;"></div></div>
+                <span class="val">${b.range}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Shows aligned with your vibe</h2>
+          ${picks}
+        </div>
+      `;
+    }
+
+    function bindToggle() {
+      const btn = document.getElementById('toggleMore');
+      const rest = document.getElementById('restTraits');
+      if (!btn || !rest) return;
+      btn.addEventListener('click', () => {
+        const open = rest.style.display === 'block';
+        rest.style.display = open ? 'none' : 'block';
+        btn.innerHTML = open ? 'Show all traits &#9660;' : 'Hide &#9650;';
+      });
+    }
+
+    function setUrlMember(slug) {
+      const u = new URL(window.location.href);
+      u.searchParams.set('member', slug);
+      window.history.replaceState(null, '', u.toString());
+    }
+
+    async function load(slug) {
+      const content = document.getElementById('content');
+      const footer = document.getElementById('footer');
+      content.innerHTML = '<div class="empty-card">Loading&hellip;</div>';
+      footer.textContent = '';
+
+      try {
+        const url = slug ? `/api/vibe?member=${encodeURIComponent(slug)}` : '/api/vibe';
+        const res = await fetch(url);
+        const data = await res.json();
+
+        const sel = document.getElementById('memberSelect');
+        if (sel.options.length === 0 && data.members) {
+          sel.innerHTML = data.members.map(m => `<option value="${escapeHtml(m.slug)}">${escapeHtml(m.name)}</option>`).join('');
+        }
+        if (data.member && data.member.slug) {
+          sel.value = data.member.slug;
+        }
+
+        if (!data.member) {
+          content.innerHTML = '<div class="empty-card">Pick a member from the dropdown.</div>';
+          return;
+        }
+
+        content.innerHTML = renderMember(data.member);
+        bindToggle();
+
+        if (data.member.scored_count != null && data.member.active_count != null) {
+          footer.textContent = `Computed from ${data.member.scored_count} of ${data.member.active_count} active shows.`;
+        }
+      } catch (e) {
+        content.innerHTML = `<div class="err">Failed to load: ${escapeHtml(e.message || e)}</div>`;
+      }
+    }
+
+    document.getElementById('memberSelect').addEventListener('change', (e) => {
+      setUrlMember(e.target.value);
+      load(e.target.value);
+    });
+
+    // On first load: read ?member= from URL, else check /auth/check, else default to patrick.
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      let slug = params.get('member');
+      if (!slug) {
+        try {
+          const r = await fetch('/auth/check');
+          if (r.ok) {
+            const d = await r.json();
+            if (d.authenticated && d.member) slug = d.member;
+          }
+        } catch {}
+      }
+      if (!slug) slug = 'patrick';
+      load(slug);
+    })();
+  </script>
+</body>
+</html>

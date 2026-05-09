@@ -1,6 +1,10 @@
+import { EXCLUDED_FROM_TASTE } from '../_shared/excluded-members.js';
+
 function corsHeaders() {
   return { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
 }
+
+const EXCLUDED_SQL = EXCLUDED_FROM_TASTE.map(s => `'${s}'`).join(',');
 
 // A member is "seed-only" when every row they have is an untouched seed:
 // added_by='seed', not archived, and updated_at IS NULL.
@@ -37,6 +41,7 @@ async function memberBased(env, member) {
       WHERE s.archived = 0
         AND s.member_slug != ?
         AND s.member_slug NOT IN (SELECT slug FROM seed_only_members)
+        AND s.member_slug NOT IN (${EXCLUDED_SQL})
         AND LOWER(s.title) IN (SELECT t FROM member_active)
       GROUP BY s.member_slug
       ORDER BY shared DESC, s.member_slug

@@ -1,7 +1,6 @@
-// Members who should never be returned as someone else's match.
-// Why: their lists aren't curated tightly enough to represent shared taste —
-// they accumulate too many shows and drown out real matches.
-const EXCLUDED_AS_MATCH = ['paula'];
+import { EXCLUDED_FROM_TASTE } from '../_shared/excluded-members.js';
+
+const EXCLUDED_AS_MATCH = EXCLUDED_FROM_TASTE;
 
 export async function onRequestGet(context) {
   const { env, request } = context;
