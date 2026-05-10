@@ -240,8 +240,15 @@
     }
 
     fetch('/api/reporting')
-      .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
-      .then(renderReport)
+      .then(r => {
+        if (r.status === 401) {
+          document.getElementById('generated').textContent = '';
+          document.getElementById('loadErr').innerHTML = 'Please <a href="/">log in</a> from the homepage to view reporting.';
+          return null;
+        }
+        return r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`);
+      })
+      .then(data => { if (data) renderReport(data); })
       .catch(err => {
         document.getElementById('generated').textContent = '';
         document.getElementById('loadErr').textContent = 'Failed to load: ' + err;

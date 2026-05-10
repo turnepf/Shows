@@ -62,8 +62,16 @@ CREATE TABLE IF NOT EXISTS show_traits (
   generated_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS failed_logins (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ip TEXT NOT NULL,
+  member_slug TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_shows_list ON shows(list);
 CREATE INDEX IF NOT EXISTS idx_shows_archived ON shows(archived);
 CREATE INDEX IF NOT EXISTS idx_shows_member ON shows(member_slug);
 CREATE INDEX IF NOT EXISTS idx_actors_show_id ON actors(show_id);
 CREATE INDEX IF NOT EXISTS idx_member_codes_code ON member_codes(code);
+CREATE INDEX IF NOT EXISTS idx_failed_logins_ip_time ON failed_logins(ip, created_at);

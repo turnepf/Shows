@@ -5,13 +5,28 @@ function json(data, status = 200) {
   });
 }
 
+async function getSession(request, env) {
+  const cookie = request.headers.get('Cookie') || '';
+  const match = cookie.match(/session=([^;]+)/);
+  if (!match) return null;
+  try {
+    const session = await env.DB.prepare(
+      'SELECT email, member_slug, expires_at FROM sessions WHERE id = ?'
+    ).bind(match[1]).first();
+    if (session && new Date(session.expires_at) > new Date()) return session;
+  } catch (e) {}
+  return null;
+}
+
 async function countOver(env, sql, ...binds) {
   const row = await env.DB.prepare(sql).bind(...binds).first();
   return row ? row.cnt : 0;
 }
 
 export async function onRequestGet(context) {
-  const { env } = context;
+  const { env, request } = context;
+  const session = await getSession(request, env);
+  if (!session) return json({ error: 'Unauthorized' }, 401);
 
   const windows = [
     ['day', "AND created_at >= datetime('now', '-1 day')", "AND updated_at >= datetime('now', '-1 day')"],

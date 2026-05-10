@@ -2,8 +2,26 @@ function corsHeaders() {
   return { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
 }
 
+async function getSession(request, env) {
+  const cookie = request.headers.get('Cookie') || '';
+  const match = cookie.match(/session=([^;]+)/);
+  if (!match) return null;
+  try {
+    const session = await env.DB.prepare(
+      'SELECT email, member_slug, expires_at FROM sessions WHERE id = ?'
+    ).bind(match[1]).first();
+    if (session && new Date(session.expires_at) > new Date()) return session;
+  } catch (e) {}
+  return null;
+}
+
 export async function onRequestPost(context) {
   const { env, request } = context;
+  const session = await getSession(request, env);
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders() });
+  }
+
   const body = await request.json();
   const { show_id, source_member, target_member, recommended_by, notes } = body;
 
