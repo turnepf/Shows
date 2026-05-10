@@ -899,16 +899,23 @@
       }
       updateDesc();
 
-      checkAuth();
+      checkAuth().then(() => {
+        // Enrichment + URL sync mutate the DB, so they're gated to logged-in members only.
+        if (!authMember) return;
+        fetch('/api/enrich', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ member: slug }),
+        }).catch(() => {});
+        // Sync good URLs across members once per day
+        const lastSync = localStorage.getItem('last_url_sync');
+        const now = Date.now();
+        if (!lastSync || now - parseInt(lastSync) > 86400000) {
+          fetch('/api/sync-urls', { method: 'POST' }).then(() => localStorage.setItem('last_url_sync', now)).catch(() => {});
+        }
+      });
       loadShows();
       loadMemberMatch();
-      fetch(`/api/enrich?member=${slug}`).catch(() => {});
-      // Sync good URLs across members once per day
-      const lastSync = localStorage.getItem('last_url_sync');
-      const now = Date.now();
-      if (!lastSync || now - parseInt(lastSync) > 86400000) {
-        fetch('/api/sync-urls').then(() => localStorage.setItem('last_url_sync', now)).catch(() => {});
-      }
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
       // Detect TV-like environment and offer TV view
       const dismissed = sessionStorage.getItem('tv_banner_dismissed');

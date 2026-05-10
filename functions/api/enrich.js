@@ -102,8 +102,29 @@ async function fetchOMDB(title, apiKey, type) {
   return { canonicalTitle: null, rating: null, actors: [] };
 }
 
-export async function onRequestGet(context) {
+async function getSession(request, env) {
+  const cookie = request.headers.get('Cookie') || '';
+  const match = cookie.match(/session=([^;]+)/);
+  if (!match) return null;
+  try {
+    const session = await env.DB.prepare(
+      'SELECT email, member_slug, expires_at FROM sessions WHERE id = ?'
+    ).bind(match[1]).first();
+    if (session && new Date(session.expires_at) > new Date()) return session;
+  } catch (e) {}
+  return null;
+}
+
+export async function onRequestPost(context) {
   const { env, request } = context;
+  const session = await getSession(request, env);
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const apiKey = env.OMDB_API_KEY;
   if (!apiKey) {
     return new Response(JSON.stringify({ enriched: 0 }), {
@@ -111,26 +132,23 @@ export async function onRequestGet(context) {
     });
   }
 
-  const url = new URL(request.url);
-  const member = url.searchParams.get('member');
-
+  let body = {};
+  try { body = await request.json(); } catch (e) {}
+  const member = body.member || null;
   // Soft caps to keep us well clear of OMDB's free-tier 1k/day and TMDB's per-key budget.
-  // Override per-call with ?max_omdb=N and ?max_tmdb=N if you need a larger sweep.
-  const maxOmdb = parseInt(url.searchParams.get('max_omdb') || '50', 10);
-  const maxTmdb = parseInt(url.searchParams.get('max_tmdb') || '50', 10);
+  const maxOmdb = parseInt(body.max_omdb ?? '50', 10);
+  const maxTmdb = parseInt(body.max_tmdb ?? '50', 10);
 
   // Order by most-recent change first so newly-added/edited shows enrich before older backlog.
-  let query = `SELECT s.id, s.title, s.network, s.network_url, s.movie
+  const baseSelect = `SELECT s.id, s.title, s.network, s.network_url, s.movie
      FROM shows s
      WHERE s.archived = 0
        AND (s.rating IS NULL
          OR s.network_url IS NULL
-         OR NOT EXISTS (SELECT 1 FROM actors a WHERE a.show_id = s.id))
-     ORDER BY COALESCE(s.updated_at, s.created_at) DESC
-     LIMIT ?`;
+         OR NOT EXISTS (SELECT 1 FROM actors a WHERE a.show_id = s.id))`;
   const stmt = member
-    ? env.DB.prepare(query.replace('LIMIT ?', `AND s.member_slug = '${member}' LIMIT ?`)).bind(maxOmdb)
-    : env.DB.prepare(query).bind(maxOmdb);
+    ? env.DB.prepare(`${baseSelect} AND s.member_slug = ? ORDER BY COALESCE(s.updated_at, s.created_at) DESC LIMIT ?`).bind(member, maxOmdb)
+    : env.DB.prepare(`${baseSelect} ORDER BY COALESCE(s.updated_at, s.created_at) DESC LIMIT ?`).bind(maxOmdb);
   const { results: needsRating } = await stmt.all();
 
   let enriched = 0;
@@ -193,12 +211,12 @@ export async function onRequestGet(context) {
   const tmdbKey = env.TMDB_API_KEY;
   let tmdbUpdated = 0;
   if (tmdbKey) {
-    let tmdbQuery = `SELECT id, title, movie, list FROM shows
+    const tmdbBase = `SELECT id, title, movie, list FROM shows
        WHERE archived = 0 AND movie = 0`;
-    if (member) tmdbQuery += ` AND member_slug = '${member}'`;
-    tmdbQuery += ` ORDER BY COALESCE(enriched_at, '1970-01-01') ASC LIMIT ${maxTmdb}`;
-
-    const { results: tmdbShows } = await env.DB.prepare(tmdbQuery).all();
+    const tmdbStmt = member
+      ? env.DB.prepare(`${tmdbBase} AND member_slug = ? ORDER BY COALESCE(enriched_at, '1970-01-01') ASC LIMIT ?`).bind(member, maxTmdb)
+      : env.DB.prepare(`${tmdbBase} ORDER BY COALESCE(enriched_at, '1970-01-01') ASC LIMIT ?`).bind(maxTmdb);
+    const { results: tmdbShows } = await tmdbStmt.all();
 
     for (const show of tmdbShows) {
       try {
