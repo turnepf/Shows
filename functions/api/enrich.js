@@ -1,3 +1,5 @@
+import { getSession } from '../_shared/auth.js';
+
 // Networks with `param` pass the show name in the search URL query string.
 // Networks without `param` just link to the search page (no show name).
 const NETWORK_SEARCH = {
@@ -100,19 +102,6 @@ async function fetchOMDB(title, apiKey, type) {
   if (result) return result;
 
   return { canonicalTitle: null, rating: null, actors: [] };
-}
-
-async function getSession(request, env) {
-  const cookie = request.headers.get('Cookie') || '';
-  const match = cookie.match(/session=([^;]+)/);
-  if (!match) return null;
-  try {
-    const session = await env.DB.prepare(
-      'SELECT email, member_slug, expires_at FROM sessions WHERE id = ?'
-    ).bind(match[1]).first();
-    if (session && new Date(session.expires_at) > new Date()) return session;
-  } catch (e) {}
-  return null;
 }
 
 export async function onRequestPost(context) {

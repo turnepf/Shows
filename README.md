@@ -11,7 +11,7 @@ Live at [showpicker.club](https://showpicker.club).
 - **Auto-enriched** with IMDB ratings, cast, and network links via OMDB and TMDB.
 - **TMDB next-season dates** with finale range and auto-detected series-complete status.
 - **What Members Are Watching** — home page shows the most-watched shows across all members.
-- **Suggest a show** — anyone (logged in or not) can suggest a show to any member.
+- **Suggest a show** — any logged-in member can suggest a show to any other member.
 - **Per-member 4-digit login codes** stored in the DB (no hardcoded secrets).
 - **PWA** — installable to home screen.
 - **TV view** — `/tv/<slug>` renders a larger, read-only layout for casting to a TV.

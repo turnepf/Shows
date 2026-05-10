@@ -1,4 +1,5 @@
 import { fetchEnrichment } from '../_shared/enrichment.js';
+import { getSession } from '../_shared/auth.js';
 
 const NETWORK_SEARCH = {
   'Netflix': { base: 'https://www.netflix.com/search' },
@@ -36,20 +37,6 @@ function cleanUrl(url) {
 function corsHeaders() {
   return { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
 }
-
-async function getSession(request, env) {
-  const cookie = request.headers.get('Cookie') || '';
-  const match = cookie.match(/session=([^;]+)/);
-  if (!match) return null;
-  try {
-    const session = await env.DB.prepare(
-      'SELECT email, member_slug, expires_at FROM sessions WHERE id = ?'
-    ).bind(match[1]).first();
-    if (session && new Date(session.expires_at) > new Date()) return session;
-  } catch (e) {}
-  return null;
-}
-
 
 export async function onRequestGet(context) {
   const { env, request } = context;

@@ -1,3 +1,5 @@
+import { getSession } from '../_shared/auth.js';
+
 function corsHeaders() {
   return { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
 }
@@ -59,6 +61,11 @@ async function fetchOMDB(title, env) {
 
 export async function onRequestPost(context) {
   const { env, request } = context;
+  const session = await getSession(request, env);
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders() });
+  }
+
   const body = await request.json();
   const { title, network, recommended_by, notes, movie, full_series, member } = body;
 

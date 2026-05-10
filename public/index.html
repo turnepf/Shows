@@ -432,7 +432,7 @@
         <strong>4/15</strong> &mdash; <strong>Network links sync across members.</strong> When someone finds a good direct link for a show, it automatically copies to matching shows on other members' lists (runs once per day).<br>
         <strong>4/15</strong> &mdash; <strong>Watching With field.</strong> Track who you're watching a show with.<br>
         <strong>4/14</strong> &mdash; <strong>Series Complete icon.</strong> Shows that have ended get a &#127916; badge.<br>
-        <strong>4/13</strong> &mdash; <strong>Suggest a Show.</strong> Not logged in? You can still suggest shows to any member via the button at the bottom of any list.<br>
+        <strong>4/13</strong> &mdash; <strong>Suggest a Show.</strong> Logged-in members can suggest shows to any other member via the button at the bottom of any list.<br>
         <strong>4/13</strong> &mdash; <strong>Toggle pills.</strong> Show or hide Ratings, Networks, Recommended By, Dates, and Notes with the pill buttons at the bottom.<br>
         <strong>4/13</strong> &mdash; <strong>Season dates.</strong> See when the next season starts (and when it ends) pulled automatically from TMDB.<br>
         <strong>4/13</strong> &mdash; <strong>Multi-member support.</strong> One app, multiple members &mdash; each with their own lists and login codes.<br>
@@ -1273,7 +1273,10 @@
       const legend = legendParts.join(' | ');
       if (legend) container.innerHTML += `<div class="network-counts">${legend}</div>`;
       if (countsHtml) container.innerHTML += `<div class="network-counts">${countsHtml}</div>`;
-      if (!isEditor) container.innerHTML += `<div class="suggest-bar" style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;"><button class="suggest-btn" onclick="shareList()" style="background: #95a5a6;">Share ${escapeHtml(owners)}'s Shows</button><button class="suggest-btn" onclick="openSuggestModal()">Suggest a Show for ${escapeHtml(owners)}</button></div>`;
+      if (!isEditor) {
+        const suggestBtn = authMember ? `<button class="suggest-btn" onclick="openSuggestModal()">Suggest a Show for ${escapeHtml(owners)}</button>` : '';
+        container.innerHTML += `<div class="suggest-bar" style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;"><button class="suggest-btn" onclick="shareList()" style="background: #95a5a6;">Share ${escapeHtml(owners)}'s Shows</button>${suggestBtn}</div>`;
+      }
 
       const sortHtml = `<select class="sort-select" onchange="changeSort(this.value)">
         <option value="rating"${sortOrder === 'rating' ? ' selected' : ''}>Sort by Rating</option>
