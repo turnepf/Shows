@@ -1,0 +1,68 @@
+name: Daily D1 backup
+
+# Runs daily and pushes a SQL dump of shows-db to Google Drive (gdrive:Shows-Backups/).
+# Also prunes failed_logins rows older than 7 days. No dependency on Patrick's Mac.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — token with D1:Edit scope on shows-db
+#   CLOUDFLARE_ACCOUNT_ID  — Cloudflare account id (visible on the dashboard sidebar)
+#   RCLONE_CONF            — full contents of ~/.config/rclone/rclone.conf, including
+#                            the [gdrive] section + token JSON (drive.file scope)
+
+on:
+  schedule:
+    # Daily at 03:00 UTC (~23:00 EST / 22:00 EDT). Cron syntax is UTC on GHA.
+    - cron: '0 3 * * *'
+  workflow_dispatch:  # Manual trigger from Actions tab
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install rclone
+        run: |
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+          rclone version | head -1
+
+      - name: Write rclone config from secret
+        run: |
+          mkdir -p ~/.config/rclone
+          printf '%s' "${{ secrets.RCLONE_CONF }}" > ~/.config/rclone/rclone.conf
+          chmod 600 ~/.config/rclone/rclone.conf
+          rclone listremotes
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install wrangler
+        run: npm install -g wrangler@latest
+
+      - name: Export D1 to /tmp
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          FILE="/tmp/shows-db-${DATE}.sql"
+          wrangler d1 export shows-db --remote --output "$FILE"
+          ls -lh "$FILE"
+          echo "FILE=$FILE" >> "$GITHUB_ENV"
+
+      - name: Upload to Google Drive
+        run: |
+          rclone copy "$FILE" gdrive:Shows-Backups/ -v
+          rclone ls gdrive:Shows-Backups/ | sort -k 2 | tail -5
+
+      - name: Prune Drive backups older than 30 days
+        run: rclone delete --min-age 30d gdrive:Shows-Backups/ || true
+
+      - name: Prune D1 failed_logins older than 7 days
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          wrangler d1 execute shows-db --remote \
+            --command "DELETE FROM failed_logins WHERE created_at < datetime('now', '-7 days');"
