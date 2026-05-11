@@ -26,10 +26,16 @@ jobs:
           rclone version | head -1
 
       - name: Write rclone config from secret
+        env:
+          RCLONE_CONF_CONTENT: ${{ secrets.RCLONE_CONF }}
         run: |
           mkdir -p ~/.config/rclone
-          printf '%s' "${{ secrets.RCLONE_CONF }}" > ~/.config/rclone/rclone.conf
+          printf '%s\n' "$RCLONE_CONF_CONTENT" > ~/.config/rclone/rclone.conf
           chmod 600 ~/.config/rclone/rclone.conf
+          # Diagnostic: confirm structure (token line redacted in output)
+          echo "--- config (token redacted) ---"
+          sed 's/^token = .*/token = [REDACTED]/' ~/.config/rclone/rclone.conf
+          echo "--- remotes ---"
           rclone listremotes
 
       - name: Setup Node
