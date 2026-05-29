@@ -56,7 +56,8 @@ INSERT OR IGNORE INTO member_emails (email, member_slug, is_primary) VALUES
   ('josephlbrooks@gmail.com',        'joey',     1),
   ('countymayor@claibornecountytn.gov','joey',   0),
   ('hillbillyvol@hotmail.com',       'joey',     0),
-  ('kellyballwolf@gmail.com',        'kelly',    1);
+  ('kellyballwolf@gmail.com',        'kelly',    1),
+  ('laurinpotter0304@gmail.com',     'laurin',   1);
 
 -- Backfill mobile numbers for any members missing one. INSERT OR IGNORE
 -- with the (phone, member_slug) UNIQUE means we never duplicate, and
@@ -72,4 +73,5 @@ INSERT OR IGNORE INTO member_phones (phone, member_slug, is_primary) VALUES
   ('+15082452334', 'kirsten',0),
   ('+13367822002', 'annie',  0),
   ('+19196329667', 'carter', 0),
-  ('+13363145209', 'kelly',  0);
+  ('+13363145209', 'kelly',  0),
+  ('+13363063084', 'laurin', 0);
